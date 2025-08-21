@@ -176,7 +176,7 @@ const App = ({ onLogout }) => {
                         try {
                             const loadingToast = toast.info("Fetching Location...", { autoClose: false });
                             const res = await axios.get(
-                                `https://maps.googleapis.com/maps/api/geocode/json?latlng=${latitude},${longitude}&key=AIzaSyBNgupRhPMKk4UJrWBeZDnkPENveW0Eg2k`
+                                `${API_BASE_URL}/api/geocode?lat=${latitude}&lng=${longitude}`
                             );
 
                             if (res.data.status === 'OK' && res.data.results.length > 0) {
@@ -207,7 +207,7 @@ const App = ({ onLogout }) => {
                             setLocationError('Could not fetch address details. Please enter manually.');
 
                         }
-                    },
+                    },      
                     (error) => {
                         setLocationError('Location permission denied. Please enter address manually.');
                     }
