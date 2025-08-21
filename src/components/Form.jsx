@@ -100,29 +100,48 @@ const App = ({ onLogout }) => {
         }
     };
 
-    const handleCapturedPhoto = async (file) => {
-        try {
-            const base64 = await convertToBase64(file);
-            if (currentPhotoType === 'mainGate') {
-                setFormData({
-                    ...formData,
-                    mainGatePhoto: file,
-                    mainGatePhotoBase64: base64
-                });
-            } else if (currentPhotoType === 'building') {
-                setFormData({
-                    ...formData,
-                    buildingPhoto: file,
-                    buildingPhotoBase64: base64
-                });
+ const handleCapturedPhoto = async (file) => {
+    try {
+        const base64 = await convertToBase64(file);
+
+        if (currentPhotoType === "mainGate") {
+            setFormData({
+                ...formData,
+                mainGatePhoto: file,
+                mainGatePhotoBase64: base64,
+            });
+
+            // ✅ Also update hidden input so HTML5 validation passes
+            const input = document.getElementById("mainGatePhoto");
+            if (input) {
+                const dataTransfer = new DataTransfer();
+                dataTransfer.items.add(file);
+                input.files = dataTransfer.files;
             }
-            toast.success('Photo captured successfully!');
-            stopCamera();
-        } catch (error) {
-            console.error('Error processing captured photo:', error);
-            toast.error('Error processing photo');
+        } else if (currentPhotoType === "building") {
+            setFormData({
+                ...formData,
+                buildingPhoto: file,
+                buildingPhotoBase64: base64,
+            });
+
+            // ✅ Also update hidden input
+            const input = document.getElementById("buildingPhoto");
+            if (input) {
+                const dataTransfer = new DataTransfer();
+                dataTransfer.items.add(file);
+                input.files = dataTransfer.files;
+            }
         }
-    };
+
+        toast.success("Photo captured successfully!");
+        stopCamera();
+    } catch (error) {
+        console.error("Error processing captured photo:", error);
+        toast.error("Error processing photo");
+    }
+};
+
 
     const stopCamera = () => {
         if (videoRef.current && videoRef.current.srcObject) {
