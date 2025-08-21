@@ -152,29 +152,14 @@ const App = ({ onLogout }) => {
         setCurrentPhotoType('');
     };
 
-    // Photo upload options modal
-    const showPhotoOptions = (photoType) => {
-        const options = [
-            { text: 'Take Photo', action: () => startCamera(photoType) },
-            { text: 'Upload from Device', action: () => document.getElementById(photoType + 'Photo').click() }
-        ];
 
-        // Create a simple modal-like experience
-        const choice = window.confirm('Would you like to take a photo with camera? Click OK for Camera, Cancel to upload from device.');
-        if (choice) {
-            startCamera(photoType);
-        } else {
-            document.getElementById(photoType + 'Photo').click();
-        }
-    };
-
+  
     // Handle location and autofill on component load
     useEffect(() => {
         async function fetchData() {
             const name = localStorage.getItem("name");
             if (name) {
                 const res = await axios.get(`${API_BASE_URL}/api/auth/profile/${name}`);
-                console.log("res", res.data);
                 if (res.data.user) {
                     setFormData((prevData) => ({ ...prevData, surveyorName: res.data.user.name, phone: res.data.user.phone }));
                 }
@@ -199,7 +184,6 @@ const App = ({ onLogout }) => {
                             );
 
                             if (res.data.status === 'OK' && res.data.results.length > 0) {
-                                console.log('Geocoding result:', res.data.results);
                                 const result = res.data.results[0];
                                 const formattedAddress = result.formatted_address;
                                 let zipCode = '';
@@ -371,7 +355,6 @@ const App = ({ onLogout }) => {
                     buildingPhoto: formData.buildingPhotoBase64,
                 };
 
-                console.log("Submitting data:", submissionData);
                 const loadingToast = toast.info("Uploading...", { autoClose: false });
 
                 const res = await axios.post(`${API_BASE_URL}/api/form/submit`, submissionData, {
