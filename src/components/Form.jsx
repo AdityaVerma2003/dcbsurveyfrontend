@@ -934,7 +934,7 @@ const App = ({ onLogout }) => {
                                     onClick={handleSubmitAnother}
                                     className="bg-green-600 text-white font-bold py-3 px-6 rounded-lg hover:bg-green-700 transition-colors shadow-lg"
                                 >
-                                    Submit Another Response
+                                    Submit Again
                                 </button>
                                 <button type="button"
                                     onClick={onLogout}
