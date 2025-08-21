@@ -3,8 +3,9 @@ import axios from 'axios';
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import { Users, FileText, Search, Download, Eye, Calendar, MapPin, User, Building, LogOut, XCircle, ChevronLeft, ChevronRight, Camera } from 'lucide-react';
+import SurveyorRegistrationForm from './SurveyorRegistration';
 
-const AdminDashboard = ({onLogout}) => {
+const AdminDashboard = ({ onLogout }) => {
   const [data, setData] = useState([]);
   const [surveyors, setSurveyors] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -71,7 +72,7 @@ const AdminDashboard = ({onLogout}) => {
   const indexOfFirstSubmission = indexOfLastSubmission - submissionsItemsPerPage;
   const currentSubmissions = filteredData.slice(indexOfFirstSubmission, indexOfLastSubmission);
   const totalSubmissionPages = Math.ceil(filteredData.length / submissionsItemsPerPage);
-  
+
   const paginateSubmissions = (pageNumber) => setSubmissionsCurrentPage(pageNumber);
 
   // --- Pagination Logic for Surveyors ---
@@ -79,7 +80,7 @@ const AdminDashboard = ({onLogout}) => {
   const indexOfFirstSurveyor = indexOfLastSurveyor - surveyorsItemsPerPage;
   const currentSurveyors = surveyors.slice(indexOfFirstSurveyor, indexOfLastSurveyor);
   const totalSurveyorPages = Math.ceil(surveyors.length / surveyorsItemsPerPage);
-  
+
   const paginateSurveyors = (pageNumber) => setSurveyorsCurrentPage(pageNumber);
 
   const downloadExcel = async () => {
@@ -88,20 +89,20 @@ const AdminDashboard = ({onLogout}) => {
       const response = await axios.get(`${API_BASE_URL}/api/form/download-excel`, {
         responseType: 'blob', // Important to handle the binary file data
       });
-      
+
       const url = window.URL.createObjectURL(new Blob([response.data]));
       const link = document.createElement('a');
       link.href = url;
-      
+
       const currentDate = new Date().toISOString().split('T')[0];
       const filename = `property_survey_${filteredData.length}_records_${currentDate}.xlsx`;
-      
+
       link.setAttribute('download', filename);
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
       window.URL.revokeObjectURL(url);
-      
+
       toast.dismiss(loadingToast);
       toast.success('Excel File Downloaded Successfully!', {
         position: "top-right",
@@ -140,7 +141,7 @@ const AdminDashboard = ({onLogout}) => {
       </div>
     </div>
   );
-  
+
   // Function to handle showing the details modal
   const handleViewDetails = (entry) => {
     setSelectedEntry(entry);
@@ -181,9 +182,9 @@ const AdminDashboard = ({onLogout}) => {
           <div className="flex justify-between items-center h-16">
             <div className="flex items-center">
               <Building className="h-8 w-8 text-blue-600 mr-3" />
-              <h1 className="text-xl font-bold text-gray-900">Delhi Cantonment</h1>
+              <h1 className="text-xl font-bold text-gray-900">Delhi Cantonment Board 2025</h1>
             </div>
-            <button 
+            <button
               onClick={() => onLogout()}
               className="flex items-center px-4 py-2 text-sm font-medium text-gray-600 hover:text-gray-900 transition-colors"
             >
@@ -202,7 +203,7 @@ const AdminDashboard = ({onLogout}) => {
               <div className="max-w-3xl">
                 <h2 className="text-3xl font-bold mb-4">Welcome to the Property Tax Survey Portal</h2>
                 <p className="text-blue-100 text-lg leading-relaxed">
-                  You are now logged in to the Delhi Cantonment Property Tax Survey system. 
+                  You are now logged in to the Delhi Cantonment Property Tax Survey system.
                   Below, you can check the list of assigned surveyor details and track the forms submitted.
                 </p>
               </div>
@@ -210,38 +211,40 @@ const AdminDashboard = ({onLogout}) => {
 
             {/* Stats Cards */}
             <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-              <StatCard 
-                title="Total Submissions" 
-                value={data.length} 
-                icon={FileText} 
-                color="#3B82F6" 
+              <StatCard
+                title="Total Submissions"
+                value={data.length}
+                icon={FileText}
+                color="#3B82F6"
               />
-              <StatCard 
-                title="Active Surveyors" 
-                value={surveyors.length} 
-                icon={Users} 
-                color="#10B981" 
+              <StatCard
+                title="Active Surveyors"
+                value={surveyors.length}
+                icon={Users}
+                color="#10B981"
               />
-              <StatCard 
-                title="This Month" 
+              <StatCard
+                title="This Month"
                 value={data.filter(entry => {
                   const entryDate = new Date(entry.date);
                   const now = new Date();
                   return entryDate.getMonth() === now.getMonth() && entryDate.getFullYear() === now.getFullYear();
-                }).length} 
-                icon={Calendar} 
-                color="#F59E0B" 
+                }).length}
+                icon={Calendar}
+                color="#F59E0B"
               />
-              <StatCard 
-                title="Properties Surveyed" 
-                value={data.length} 
-                icon={MapPin} 
-                color="#EF4444" 
-              /> 
+              <StatCard
+                title="Properties Surveyed"
+                value={data.length}
+                icon={MapPin}
+                color="#EF4444"
+              />
             </div>
 
             {/* Action Buttons */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {/* First Button */}
               <button
                 onClick={() => { setActiveView('surveyors'); setSurveyorsCurrentPage(1); }}
                 className="group bg-white hover:bg-blue-50 border-2 border-gray-200 hover:border-blue-300 rounded-xl p-8 text-left transition-all duration-200 transform hover:scale-105"
@@ -253,11 +256,15 @@ const AdminDashboard = ({onLogout}) => {
                   <h3 className="text-xl font-bold text-gray-900">View Surveyor List</h3>
                 </div>
                 <p className="text-gray-600 leading-relaxed">
-                  Access the complete list of surveyors and their submission statistics. 
+                  Access the complete list of surveyors and their submission statistics.
                   Monitor surveyor performance and activity levels.
                 </p>
+                <div className="flex justify-center mt-4">
+                  <div className="bg-blue-500 text-white rounded-lg px-6 py-2 text-center">View</div>
+                </div>
               </button>
 
+              {/* Second Button */}
               <button
                 onClick={() => { setActiveView('submissions'); setSubmissionsCurrentPage(1); }}
                 className="group bg-white hover:bg-green-50 border-2 border-gray-200 hover:border-green-300 rounded-xl p-8 text-left transition-all duration-200 transform hover:scale-105"
@@ -269,11 +276,36 @@ const AdminDashboard = ({onLogout}) => {
                   <h3 className="text-xl font-bold text-gray-900">View Submitted Forms</h3>
                 </div>
                 <p className="text-gray-600 leading-relaxed">
-                  Review all submitted property tax survey forms with advanced search, 
+                  Review all submitted property tax survey forms with advanced search,
                   filtering, and export capabilities.
                 </p>
+                <div className="flex justify-center mt-4">
+                  <div className="bg-blue-500 text-white rounded-lg px-6 py-2 text-center">View</div>
+                </div>
               </button>
+
+              {/* Third Button → Full Width on Large Screens */}
+              <button
+                onClick={() => setActiveView('register')}
+                className="group bg-white hover:bg-blue-50 border-2 border-gray-200 hover:border-blue-300 rounded-xl p-8 text-left transition-all duration-200 transform hover:scale-105 lg:col-span-2"
+              >
+                <div className="flex items-center mb-4">
+                  <div className="p-3 bg-blue-100 group-hover:bg-blue-200 rounded-lg mr-4">
+                    <Users className="w-8 h-8 text-blue-600" />
+                  </div>
+                  <h3 className="text-xl font-bold text-gray-900">Register Surveyor</h3>
+                </div>
+                <p className="text-gray-600 leading-relaxed">
+                  Register new surveyors to the system. Ensure all surveyors are properly onboarded
+                  and have access to the necessary tools and resources.
+                </p>
+                <div className="flex justify-center mt-4">
+                   <div className="bg-blue-500 text-white rounded-lg px-6 py-2 text-center">Register</div>
+                </div>
+              </button>
+
             </div>
+
           </>
         )}
 
@@ -293,7 +325,7 @@ const AdminDashboard = ({onLogout}) => {
               <div className="px-6 py-4 border-b border-gray-200">
                 <h3 className="text-lg font-semibold text-gray-900">Active Surveyors ({surveyors.length})</h3>
               </div>
-              
+
               {surveyors.length === 0 ? (
                 <div className="text-center py-12">
                   <Users className="w-12 h-12 text-gray-400 mx-auto mb-4" />
@@ -386,7 +418,7 @@ const AdminDashboard = ({onLogout}) => {
                     className="flex items-center px-4 py-2 bg-green-600 hover:bg-green-700 disabled:bg-gray-400 text-white rounded-lg transition-colors"
                   >
                     <Download className="w-4 h-4 mr-2" />
-                    Export Excel
+                    Export Data
                   </button>
                 </div>
               </div>
@@ -454,11 +486,10 @@ const AdminDashboard = ({onLogout}) => {
                             {entry.propertyAddress}
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap">
-                            <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                              entry.ownerOrTenant === 'Owner' 
-                                ? 'bg-green-100 text-green-800' 
-                                : 'bg-orange-100 text-orange-800'
-                            }`}>
+                            <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${entry.ownerOrTenant === 'Owner'
+                              ? 'bg-green-100 text-green-800'
+                              : 'bg-orange-100 text-orange-800'
+                              }`}>
                               {entry.ownerOrTenant}
                             </span>
                           </td>
@@ -466,7 +497,7 @@ const AdminDashboard = ({onLogout}) => {
                             {new Date(entry.date).toLocaleDateString()}
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                            <button 
+                            <button
                               onClick={() => handleViewDetails(entry)}
                               className="flex items-center text-blue-600 hover:text-blue-900 transition-colors"
                             >
@@ -508,6 +539,9 @@ const AdminDashboard = ({onLogout}) => {
             )}
           </div>
         )}
+        {activeView === 'register' && (
+        <SurveyorRegistrationForm setActiveView={setActiveView} />
+      )}
       </div>
 
       {/* Details Modal */}
@@ -526,7 +560,7 @@ const AdminDashboard = ({onLogout}) => {
 
             {/* Main Content Grid */}
             <div className="grid gap-8">
-              {/* Left Column - Information */} 
+              {/* Left Column - Information */}
               <div className="space-y-6">
                 {/* Surveyor Info Section */}
                 <div>
@@ -584,7 +618,7 @@ const AdminDashboard = ({onLogout}) => {
                       <p><strong>Father's Name:</strong> {selectedEntry.tenantDetails?.ownerFatherName}</p>
                       <p><strong>Mother's Name:</strong> {selectedEntry.tenantDetails?.ownerMotherName}</p>
                       <p><strong>Contact:</strong> {selectedEntry.tenantDetails?.ownerContactNumber}</p>
-                      <p><strong>Rent:</strong> ${selectedEntry.tenantDetails?.monthlyRent}</p>
+                      <p><strong>Rent:</strong> ₹ {selectedEntry.tenantDetails?.monthlyRent}</p>
                       <p><strong>Address:</strong> {selectedEntry.tenantDetails?.streetAddress}</p>
                       <p><strong>ZIP Code:</strong> {selectedEntry.tenantDetails?.zipCode}</p>
                     </div>
@@ -592,7 +626,7 @@ const AdminDashboard = ({onLogout}) => {
                 )}
               </div>
 
-             
+
             </div>
           </div>
         </div>

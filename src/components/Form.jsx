@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
@@ -39,14 +39,20 @@ const App = ({ onLogout }) => {
         buildingPhoto: null,
         mainGatePhotoBase64: '',
         buildingPhotoBase64: '',
+        floor: [], // Add the new 'floor' field here
     });
     const [loading, setLoading] = useState(false);
     const [locationError, setLocationError] = useState('');
     const [errors, setErrors] = useState({});
     const [isSubmitted, setIsSubmitted] = useState(false);
+    
+    // Camera states
+    const [showCamera, setShowCamera] = useState(false);
+    const [currentPhotoType, setCurrentPhotoType] = useState('');
+    const videoRef = useRef(null);
+    const canvasRef = useRef(null);
 
     const API_BASE_URL = import.meta.env.VITE_REACT_APP_API_URL;
-
 
     // Convert file to base64
     const convertToBase64 = (file) => {
@@ -58,7 +64,106 @@ const App = ({ onLogout }) => {
         });
     };
 
+    // Camera functions
+    const startCamera = async (photoType) => {
+        setCurrentPhotoType(photoType);
+        setShowCamera(true);
+        
+        try {
+            const stream = await navigator.mediaDevices.getUserMedia({ 
+                video: { facingMode: 'environment' } // Use back camera on mobile
+            });
+            if (videoRef.current) {
+                videoRef.current.srcObject = stream;
+            }
+        } catch (error) {
+            console.error('Error accessing camera:', error);
+            toast.error('Could not access camera. Please upload from device.');
+            setShowCamera(false);
+        }
+    };
+
+    const capturePhoto = () => {
+        const video = videoRef.current;
+        const canvas = canvasRef.current;
+        
+        if (video && canvas) {
+            const context = canvas.getContext('2d');
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            context.drawImage(video, 0, 0);
+            
+            canvas.toBlob((blob) => {
+                const file = new File([blob], `${currentPhotoType}.jpg`, { type: 'image/jpeg' });
+                handleCapturedPhoto(file);
+            }, 'image/jpeg', 0.8);
+        }
+    };
+
+    const handleCapturedPhoto = async (file) => {
+        try {
+            const base64 = await convertToBase64(file);
+            if (currentPhotoType === 'mainGate') {
+                setFormData({
+                    ...formData,
+                    mainGatePhoto: file,
+                    mainGatePhotoBase64: base64
+                });
+            } else if (currentPhotoType === 'building') {
+                setFormData({
+                    ...formData,
+                    buildingPhoto: file,
+                    buildingPhotoBase64: base64
+                });
+            }
+            toast.success('Photo captured successfully!');
+            stopCamera();
+        } catch (error) {
+            console.error('Error processing captured photo:', error);
+            toast.error('Error processing photo');
+        }
+    };
+
+    const stopCamera = () => {
+        if (videoRef.current && videoRef.current.srcObject) {
+            const tracks = videoRef.current.srcObject.getTracks();
+            tracks.forEach(track => track.stop());
+        }
+        setShowCamera(false);
+        setCurrentPhotoType('');
+    };
+
+    // Photo upload options modal
+    const showPhotoOptions = (photoType) => {
+        const options = [
+            { text: 'Take Photo', action: () => startCamera(photoType) },
+            { text: 'Upload from Device', action: () => document.getElementById(photoType + 'Photo').click() }
+        ];
+        
+        // Create a simple modal-like experience
+        const choice = window.confirm('Would you like to take a photo with camera? Click OK for Camera, Cancel to upload from device.');
+        if (choice) {
+            startCamera(photoType);
+        } else {
+            document.getElementById(photoType + 'Photo').click();
+        }
+    };
+
     // Handle location and autofill on component load
+    useEffect(() => {
+        async function fetchData() {
+            const name = localStorage.getItem("name");
+            if (name) {
+                const res = await axios.get(`${API_BASE_URL}/api/auth/profile/${name}`);
+                console.log("res", res.data);
+                if (res.data.user) {
+                    setFormData((prevData) => ({ ...prevData, surveyorName: res.data.user.name, phone: res.data.user.phone }));
+                }
+            }
+        }
+        fetchData();
+    }, [step]);
+
     useEffect(() => {
         const getLocation = () => {
             if (navigator.geolocation) {
@@ -70,16 +175,37 @@ const App = ({ onLogout }) => {
 
                         try {
                             const loadingToast = toast.info("Fetching Location...", { autoClose: false });
-                            const res = await axios.get(`https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${latitude}&lon=${longitude}`);
-                            const address = res.data.address;
-                            setFormData((prevData) => ({
-                                ...prevData,
-                                propertyAddress: res.data.display_name,
-                                zipCode: address.postcode || '',
-                            }));
+                            const res = await axios.get(
+                                `https://maps.googleapis.com/maps/api/geocode/json?latlng=${latitude},${longitude}&key=AIzaSyBNgupRhPMKk4UJrWBeZDnkPENveW0Eg2k`
+                            );
+
+                            if (res.data.status === 'OK' && res.data.results.length > 0) {
+                                console.log('Geocoding result:', res.data.results);
+                                const result = res.data.results[0];
+                                const formattedAddress = result.formatted_address;
+                                let zipCode = '';
+
+                                const postcodeComponent = result.address_components.find(
+                                    (component) => component.types.includes('postal_code')
+                                );
+
+                                if (postcodeComponent) {
+                                    zipCode = postcodeComponent.long_name;
+                                }
+
+                                setFormData((prevData) => ({
+                                    ...prevData,
+                                    propertyAddress: formattedAddress,
+                                    zipCode: zipCode,
+                                }));
+                            } else {
+                                throw new Error('No results found.');
+                            }
+
                             toast.dismiss(loadingToast);
                         } catch (err) {
                             setLocationError('Could not fetch address details. Please enter manually.');
+
                         }
                     },
                     (error) => {
@@ -101,7 +227,6 @@ const App = ({ onLogout }) => {
         }
     }, [step]);
 
-
     // Validation logic
     const validate = () => {
         const newErrors = {};
@@ -115,7 +240,6 @@ const App = ({ onLogout }) => {
             if (!formData.occupiersName.trim()) newErrors.occupiersName = 'Occupier\'s Name is required.';
             if (!formData.gender) newErrors.gender = 'Gender is required.';
             if (!formData.fatherName.trim()) newErrors.fatherName = 'Father\'s Name is required.';
-            if (!formData.motherName.trim()) newErrors.motherName = 'Mother\'s Name is required.';
             if (!formData.contactNumber || !/^\d{10}$/.test(formData.contactNumber)) newErrors.contactNumber = 'Contact Number must be a 10-digit number.';
             if (formData.ownerOrTenant === 'Tenant') {
                 if (!formData.tenantDetails.monthlyRent || isNaN(formData.tenantDetails.monthlyRent)) newErrors.monthlyRent = 'Monthly Rent is required and must be a number.';
@@ -135,6 +259,7 @@ const App = ({ onLogout }) => {
         } else if (step === 4) {
             if (!formData.mainGatePhotoBase64) newErrors.mainGatePhoto = 'Main Gate photo is required.';
             if (!formData.buildingPhotoBase64) newErrors.buildingPhoto = 'Building photo is required.';
+            if (formData.floor.length === 0) newErrors.floor = 'At least one floor must be selected.';
         }
         setErrors(newErrors);
         return Object.keys(newErrors).length === 0;
@@ -142,21 +267,39 @@ const App = ({ onLogout }) => {
 
     const handleChange = (e) => {
         const { name, value, type, checked } = e.target;
+
         if (type === 'checkbox') {
-            const newFloors = checked
-                ? [...formData.numberOfFloors, value]
-                : formData.numberOfFloors.filter((floor) => floor !== value);
-            setFormData({ ...formData, numberOfFloors: newFloors });
-        } else if (name.startsWith('tenantDetails.')) {
+            if (name === 'numberOfFloors') {
+                // Handle numberOfFloors checkboxes
+                const newFloors = checked
+                    ? [...formData.numberOfFloors, value]
+                    : formData.numberOfFloors.filter((floor) => floor !== value);
+
+                setFormData({ ...formData, numberOfFloors: newFloors });
+            }
+            else if (name === 'floor') {
+                // Handle floor checkboxes
+                const newFloor = checked
+                    ? [...formData.floor, value]
+                    : formData.floor.filter((floor) => floor !== value);
+
+                setFormData({ ...formData, floor: newFloor });
+            }
+        }
+        else if (name.startsWith('tenantDetails.')) {
+            // Handle nested tenantDetails object
             const field = name.split('.')[1];
             setFormData({
                 ...formData,
                 tenantDetails: { ...formData.tenantDetails, [field]: value },
             });
-        } else {
+        }
+        else {
+            // Handle all other inputs
             setFormData({ ...formData, [name]: value });
         }
     };
+
 
     const handleFileChange = async (e) => {
         const { name, files } = e.target;
@@ -209,6 +352,7 @@ const App = ({ onLogout }) => {
                     buildingPhoto: formData.buildingPhotoBase64,
                 };
 
+                console.log("Submitting data:", submissionData);
                 const loadingToast = toast.info("Uploading...", { autoClose: false });
 
                 const res = await axios.post(`${API_BASE_URL}/api/form/submit`, submissionData, {
@@ -249,9 +393,8 @@ const App = ({ onLogout }) => {
 
     const handleSubmitAnother = () => {
         // Reset all form data and state
+
         setFormData({
-            surveyorName: '',
-            phone: '',
             date: new Date().toISOString().split('T')[0],
             wardNo: '',
             propertyAddress: '',
@@ -282,6 +425,7 @@ const App = ({ onLogout }) => {
             buildingPhoto: null,
             mainGatePhotoBase64: '',
             buildingPhotoBase64: '',
+            floor: [],
         });
         setStep(1);
         setIsSubmitted(false);
@@ -298,7 +442,7 @@ const App = ({ onLogout }) => {
                         <div className="grid md:grid-cols-2 gap-6">
                             <div>
                                 <label className="block text-gray-700 font-bold mb-2">Surveyor Name *</label>
-                                <input type="text" name="surveyorName" value={formData.surveyorName} onChange={handleChange} className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500" required />
+                                <input type="text" name="surveyorName" value={formData.surveyorName} className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 transition-colors" readOnly required />
                                 {errors.surveyorName && <p className="text-red-500 text-xs mt-1">{errors.surveyorName}</p>}
                             </div>
                             <div>
@@ -313,7 +457,7 @@ const App = ({ onLogout }) => {
                                         name="phone"
                                         id='phone'
                                         value={formData.phone}
-                                        onChange={handleChange}
+                                        readOnly
                                         className="w-full pl-24 pr-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
                                         required
                                         pattern="[0-9]{10}"
@@ -323,17 +467,22 @@ const App = ({ onLogout }) => {
                             </div>
                             <div>
                                 <label className="block text-gray-700 font-bold mb-2">Date</label>
-                                <input type="date" name="date" value={formData.date} onChange={handleChange} className="w-full px-4 py-2 border rounded-lg bg-gray-100" readOnly />
+                                <input type="date" name="date" value={formData.date} onChange={handleChange} className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 transition-colors" readOnly />
                             </div>
                             <div>
                                 <label className="block text-gray-700 font-bold mb-2">Ward No *</label>
-                                <input type="text" name="wardNo" value={formData.wardNo} onChange={handleChange} className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500" required />
+                                <select name="wardNo" value={formData.wardNo} onChange={handleChange} className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 transition-colors" required>
+                                    <option value="">Select Ward No</option>
+                                    {[...Array(8).keys()].map(i => (
+                                        <option key={i + 1} value={i + 1}> {i + 1}</option>
+                                    ))}
+                                </select>
                                 {errors.wardNo && <p className="text-red-500 text-xs mt-1">{errors.wardNo}</p>}
                             </div>
                         </div>
                         <div className="mt-6">
                             <label className="block text-gray-700 font-bold mb-2">Property Address *</label>
-                            <textarea name="propertyAddress" value={formData.propertyAddress} onChange={handleChange} rows="3" className="w-full px-4 py-2 border rounded-lg bg-gray-100 focus:outline-none" readOnly={formData.propertyAddress !== ''} required />
+                            <textarea name="propertyAddress" value={formData.propertyAddress} onChange={handleChange} rows="3" className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 transition-colors" required />
                             {errors.propertyAddress && <p className="text-red-500 text-xs mt-1">{errors.propertyAddress}</p>}
                             <p className="text-sm text-gray-500 mt-1">
                                 {formData.latitude && formData.longitude && `Latitude: ${formData.latitude.toFixed(6)}, Longitude: ${formData.longitude.toFixed(6)}`}
@@ -342,7 +491,7 @@ const App = ({ onLogout }) => {
                         </div>
                         <div className="mt-4">
                             <label className="block text-gray-700 font-bold mb-2">ZIP/Postal Code *</label>
-                            <input type="text" name="zipCode" value={formData.zipCode} onChange={handleChange} className="w-full px-4 py-2 border rounded-lg bg-gray-100 focus:outline-none" readOnly={formData.zipCode !== ''} required />
+                            <input type="text" name="zipCode" value={formData.zipCode} onChange={handleChange} className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 transition-colors" readOnly={formData.zipCode !== ''} required />
                             {errors.zipCode && <p className="text-red-500 text-xs mt-1">{errors.zipCode}</p>}
                         </div>
                     </>
@@ -354,27 +503,44 @@ const App = ({ onLogout }) => {
                         <div className="grid md:grid-cols-2 gap-6">
                             <div>
                                 <label className="block text-gray-700 font-bold mb-2">Occupier's Name *</label>
-                                <input type="text" name="occupiersName" value={formData.occupiersName} onChange={handleChange} className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500" required />
+                                <input type="text" name="occupiersName" value={formData.occupiersName} onChange={handleChange} className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 transition-colors" onKeyDown={(e) => {
+                                    // Check if the key pressed is a number (0-9)
+                                    // You can also check for numpad numbers
+                                    if (/[0-9]/.test(e.key)) {
+                                        e.preventDefault();
+                                    }
+                                }} required />
                                 {errors.occupiersName && <p className="text-red-500 text-xs mt-1">{errors.occupiersName}</p>}
                             </div>
                             <div>
                                 <label className="block text-gray-700 font-bold mb-2">Gender *</label>
-                                <select name="gender" value={formData.gender} onChange={handleChange} className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500" required>
+                                <select name="gender" value={formData.gender} onChange={handleChange} className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 transition-colors" required>
                                     <option value="">Select Gender</option>
                                     <option value="Male">Male</option>
                                     <option value="Female">Female</option>
-                                    <option value="Other">Other</option>
                                 </select>
                                 {errors.gender && <p className="text-red-500 text-xs mt-1">{errors.gender}</p>}
                             </div>
                             <div>
-                                <label className="block text-gray-700 font-bold mb-2">Father's Name *</label>
-                                <input type="text" name="fatherName" value={formData.fatherName} onChange={handleChange} className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500" required />
+                                <label className="block text-gray-700 font-bold mb-2">Father / Spouse Name *</label>
+                                <input type="text" name="fatherName" value={formData.fatherName} onChange={handleChange} className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 transition-colors" required onKeyDown={(e) => {
+                                    // Check if the key pressed is a number (0-9)
+                                    // You can also check for numpad numbers
+                                    if (/[0-9]/.test(e.key)) {
+                                        e.preventDefault();
+                                    }
+                                }}/>
                                 {errors.fatherName && <p className="text-red-500 text-xs mt-1">{errors.fatherName}</p>}
                             </div>
                             <div>
-                                <label className="block text-gray-700 font-bold mb-2">Mother's Name *</label>
-                                <input type="text" name="motherName" value={formData.motherName} onChange={handleChange} className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500" required />
+                                <label className="block text-gray-700 font-bold mb-2">Mother's Name </label>
+                                <input type="text" name="motherName" value={formData.motherName} onChange={handleChange} className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 transition-colors" onKeyDown={(e) => {
+                                    // Check if the key pressed is a number (0-9)
+                                    // You can also check for numpad numbers
+                                    if (/[0-9]/.test(e.key)) {
+                                        e.preventDefault();
+                                    }
+                                }}/>
                                 {errors.motherName && <p className="text-red-500 text-xs mt-1">{errors.motherName}</p>}
                             </div>
                             <div>
@@ -399,7 +565,7 @@ const App = ({ onLogout }) => {
                             </div>
                             <div>
                                 <label className="block text-gray-700 font-bold mb-2">Whether Owner or Tenant *</label>
-                                <select name="ownerOrTenant" value={formData.ownerOrTenant} onChange={handleChange} className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500" required>
+                                <select name="ownerOrTenant" value={formData.ownerOrTenant} onChange={handleChange} className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 transition-colors" required>
                                     <option value="Owner">Owner</option>
                                     <option value="Tenant">Tenant</option>
                                 </select>
@@ -407,26 +573,44 @@ const App = ({ onLogout }) => {
                         </div>
                         {formData.ownerOrTenant === 'Tenant' && (
                             <div className="mt-8 bg-green-50 p-6 rounded-lg border border-green-200">
-                                <h4 className="text-xl font-bold text-green-800 mb-4">Tenant Details</h4>
+
                                 <div className="grid md:grid-cols-2 gap-6">
                                     <div>
                                         <label className="block text-green-800 font-bold mb-2">Monthly Rent *</label>
-                                        <input type="number" name="tenantDetails.monthlyRent" value={formData.tenantDetails.monthlyRent} onChange={handleChange} className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500" required />
+                                        <input type="number" name="tenantDetails.monthlyRent" value={formData.tenantDetails.monthlyRent} onChange={handleChange} className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 transition-colors" required />
                                         {errors.monthlyRent && <p className="text-red-500 text-xs mt-1">{errors.monthlyRent}</p>}
                                     </div>
                                     <div>
                                         <label className="block text-green-800 font-bold mb-2">Owner's Name *</label>
-                                        <input type="text" name="tenantDetails.ownerName" value={formData.tenantDetails.ownerName} onChange={handleChange} className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500" required />
+                                        <input type="text" name="tenantDetails.ownerName" value={formData.tenantDetails.ownerName} onChange={handleChange} className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 transition-colors" required onKeyDown={(e) => {
+                                    // Check if the key pressed is a number (0-9)
+                                    // You can also check for numpad numbers
+                                    if (/[0-9]/.test(e.key)) {
+                                        e.preventDefault();
+                                    }
+                                }}/>
                                         {errors.ownerName && <p className="text-red-500 text-xs mt-1">{errors.ownerName}</p>}
                                     </div>
                                     <div>
-                                        <label className="block text-green-800 font-bold mb-2">Owner's Father's Name *</label>
-                                        <input type="text" name="tenantDetails.ownerFatherName" value={formData.tenantDetails.ownerFatherName} onChange={handleChange} className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500" required />
+                                        <label className="block text-green-800 font-bold mb-2">Owner's Father / Spouse Name *</label>
+                                        <input type="text" name="tenantDetails.ownerFatherName" value={formData.tenantDetails.ownerFatherName} onChange={handleChange} className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 transition-colors" required onKeyDown={(e) => {
+                                    // Check if the key pressed is a number (0-9)
+                                    // You can also check for numpad numbers
+                                    if (/[0-9]/.test(e.key)) {
+                                        e.preventDefault();
+                                    }
+                                }}/>
                                         {errors.ownerFatherName && <p className="text-red-500 text-xs mt-1">{errors.ownerFatherName}</p>}
                                     </div>
                                     <div>
                                         <label className="block text-green-800 font-bold mb-2">Owner's Mother's Name *</label>
-                                        <input type="text" name="tenantDetails.ownerMotherName" value={formData.tenantDetails.ownerMotherName} onChange={handleChange} className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500" required />
+                                        <input type="text" name="tenantDetails.ownerMotherName" value={formData.tenantDetails.ownerMotherName} onChange={handleChange} className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 transition-colors" required onKeyDown={(e) => {
+                                    // Check if the key pressed is a number (0-9)
+                                    // You can also check for numpad numbers
+                                    if (/[0-9]/.test(e.key)) {
+                                        e.preventDefault();
+                                    }
+                                }}/>
                                         {errors.ownerMotherName && <p className="text-red-500 text-xs mt-1">{errors.ownerMotherName}</p>}
                                     </div>
                                     <div>
@@ -450,12 +634,12 @@ const App = ({ onLogout }) => {
                                     </div>
                                     <div>
                                         <label className="block text-green-800 font-bold mb-2">Street Address *</label>
-                                        <textarea name="tenantDetails.streetAddress" value={formData.tenantDetails.streetAddress} onChange={handleChange} rows="3" className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500" required></textarea>
+                                        <textarea name="tenantDetails.streetAddress" value={formData.tenantDetails.streetAddress} onChange={handleChange} rows="3" className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 transition-colors" required></textarea>
                                         {errors.streetAddress && <p className="text-red-500 text-xs mt-1">{errors.streetAddress}</p>}
                                     </div>
                                     <div>
                                         <label className="block text-green-800 font-bold mb-2">ZIP/Postal Code *</label>
-                                        <input type="text" name="tenantDetails.zipCode" value={formData.tenantDetails.zipCode} onChange={handleChange} className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500" required />
+                                        <input type="number" name="tenantDetails.zipCode" value={formData.tenantDetails.zipCode} onChange={handleChange} className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 transition-colors" required />
                                         {errors.tenantZipCode && <p className="text-red-500 text-xs mt-1">{errors.tenantZipCode}</p>}
                                     </div>
                                 </div>
@@ -467,56 +651,114 @@ const App = ({ onLogout }) => {
                 return (
                     <>
                         <h3 className="text-2xl font-bold text-gray-700 mb-6 text-center">Step 3: Property Details</h3>
-                        <div className="grid md:grid-cols-2 gap-6">
-                            <div>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+
+                            {/* Area of Plot field */}
+                            <div className="flex flex-col">
                                 <label className="block text-gray-700 font-bold mb-2">Area of Plot (sq ft) *</label>
-                                <input type="number" name="areaOfPlot" value={formData.areaOfPlot} onChange={handleChange} className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500" required />
-                                {errors.areaOfPlot && <p className="text-red-500 text-xs mt-1">{errors.areaOfPlot}</p>}
+                                <input
+                                    type="number"
+                                    name="areaOfPlot"
+                                    value={formData.areaOfPlot}
+                                    onChange={handleChange}
+                                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 transition-colors"
+                                    required
+                                />
+                                {errors.areaOfPlot && <p className="text-red-500 text-sm mt-1">{errors.areaOfPlot}</p>}
                             </div>
-                            <div>
+
+                            {/* Nature of Building field */}
+                            <div className="flex flex-col">
                                 <label className="block text-gray-700 font-bold mb-2">Nature of Building *</label>
-                                <select name="natureOfBuilding" value={formData.natureOfBuilding} onChange={handleChange} className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500" required>
+                                <select
+                                    name="natureOfBuilding"
+                                    value={formData.natureOfBuilding}
+                                    onChange={handleChange}
+                                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 transition-colors"
+                                    required
+                                >
                                     <option value="">Select Type</option>
                                     <option value="Flat">Flat</option>
                                     <option value="Builder Floor">Builder Floor</option>
                                     <option value="Residential">Residential</option>
                                     <option value="Commercial">Commercial</option>
                                 </select>
-                                {errors.natureOfBuilding && <p className="text-red-500 text-xs mt-1">{errors.natureOfBuilding}</p>}
+                                {errors.natureOfBuilding && <p className="text-red-500 text-sm mt-1">{errors.natureOfBuilding}</p>}
                             </div>
-                            <div>
+
+                            {/* Number of Floors checkbox field */}
+                            <div className="flex flex-col">
                                 <label className="block text-gray-700 font-bold mb-2">Number of floors *</label>
                                 <div className="flex flex-wrap gap-4">
                                     {['Basement', '1', '2', '3', '4', '5'].map((floor) => (
-                                        <label key={floor} className="flex items-center space-x-2">
+                                        <label key={floor} className="flex items-center space-x-2 text-gray-600 cursor-pointer">
                                             <input
                                                 type="checkbox"
                                                 name="numberOfFloors"
                                                 value={floor}
                                                 checked={formData.numberOfFloors.includes(floor)}
                                                 onChange={handleChange}
-                                                className="form-checkbox h-5 w-5 text-green-600 rounded"
+                                                className="form-checkbox h-5 w-5 text-green-600 rounded-md transition-colors duration-200"
                                             />
                                             <span>{floor}</span>
                                         </label>
                                     ))}
                                 </div>
-                                {errors.numberOfFloors && <p className="text-red-500 text-xs mt-1">{errors.numberOfFloors}</p>}
+                                {errors.numberOfFloors && <p className="text-red-500 text-sm mt-1">{errors.numberOfFloors}</p>}
                             </div>
-                            <div>
+
+                            {/* Floor checkbox field (FIXED) */}
+                            <div className="flex flex-col">
+                                <label className="block text-gray-700 font-bold mb-2">Floor *</label>
+                                <div className="flex flex-wrap gap-4">
+                                    {['Basement', '1', '2', '3', '4', '5'].map((floor) => (
+                                        <label key={floor} className="flex items-center space-x-2 text-gray-600 cursor-pointer">
+                                            <input
+                                                type="checkbox"
+                                                name="floor"
+                                                value={floor}
+                                                checked={formData.floor.includes(floor)}
+                                                onChange={handleChange}
+                                                className="form-checkbox h-5 w-5 text-green-600 rounded-md transition-colors duration-200"
+                                            />
+                                            <span>{floor}</span>
+                                        </label>
+                                    ))}
+                                </div>
+                                {errors.floor && <p className="text-red-500 text-sm mt-1">{errors.floor}</p>}
+                            </div>
+
+                            {/* Floor Area field */}
+                            <div className="flex flex-col">
                                 <label className="block text-gray-700 font-bold mb-2">Floor Area (sq ft) *</label>
-                                <input type="number" name="floorArea" value={formData.floorArea} onChange={handleChange} className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500" required />
-                                {errors.floorArea && <p className="text-red-500 text-xs mt-1">{errors.floorArea}</p>}
+                                <input
+                                    type="number"
+                                    name="floorArea"
+                                    value={formData.floorArea}
+                                    onChange={handleChange}
+                                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 transition-colors"
+                                    required
+                                />
+                                {errors.floorArea && <p className="text-red-500 text-sm mt-1">{errors.floorArea}</p>}
                             </div>
-                            <div>
+
+                            {/* Usage Type field */}
+                            <div className="flex flex-col">
                                 <label className="block text-gray-700 font-bold mb-2">Usage type *</label>
-                                <select name="usageType" value={formData.usageType} onChange={handleChange} className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500" required>
+                                <select
+                                    name="usageType"
+                                    value={formData.usageType}
+                                    onChange={handleChange}
+                                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 transition-colors"
+                                    required
+                                >
                                     <option value="">Select Usage</option>
                                     <option value="Residential">Residential</option>
                                     <option value="Commercial">Commercial</option>
                                 </select>
-                                {errors.usageType && <p className="text-red-500 text-xs mt-1">{errors.usageType}</p>}
+                                {errors.usageType && <p className="text-red-500 text-sm mt-1">{errors.usageType}</p>}
                             </div>
+
                         </div>
                     </>
                 );
@@ -524,13 +766,58 @@ const App = ({ onLogout }) => {
                 return (
                     <>
                         <h3 className="text-2xl font-bold text-gray-700 mb-6 text-center">Step 4: Upload Photos</h3>
+                        
+                        {/* Camera Modal */}
+                        {showCamera && (
+                            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+                                <div className="bg-white p-6 rounded-lg max-w-md w-full mx-4">
+                                    <h4 className="text-lg font-bold mb-4">Take Photo</h4>
+                                    <video
+                                        ref={videoRef}
+                                        autoPlay
+                                        playsInline
+                                        className="w-full h-64 bg-gray-200 rounded"
+                                    />
+                                    <canvas ref={canvasRef} className="hidden" />
+                                    <div className="flex gap-4 mt-4">
+                                        <button
+                                            type="button"
+                                            onClick={capturePhoto}
+                                            className="flex-1 bg-green-600 text-white py-2 px-4 rounded hover:bg-green-700"
+                                        >
+                                            Capture
+                                        </button>
+                                        <button
+                                            type="button"
+                                            onClick={stopCamera}
+                                            className="flex-1 bg-gray-600 text-white py-2 px-4 rounded hover:bg-gray-700"
+                                        >
+                                            Cancel
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+
                         <div className="grid md:grid-cols-2 gap-6">
                             <div>
                                 <label className="block text-gray-700 font-bold mb-2">Main Gate Photo *</label>
-                                <input type="file" name="mainGatePhoto" id="mainGatePhoto" accept="image/*" onChange={handleFileChange} className="hidden" required />
-                                <label htmlFor="mainGatePhoto" className="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-lg cursor-pointer transition-colors w-full text-center block">
-                                    Choose File
-                                </label>
+                                <input 
+                                    type="file" 
+                                    name="mainGatePhoto" 
+                                    id="mainGatePhoto" 
+                                    accept="image/*" 
+                                    onChange={handleFileChange} 
+                                    
+                                    required 
+                                />
+                                <button
+                                    type="button"
+                                    onClick={() => showPhotoOptions('mainGate')}
+                                    className="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-lg cursor-pointer transition-colors w-full text-center block"
+                                >
+                                    Choose Photo
+                                </button>
                                 {formData.mainGatePhotoBase64 && (
                                     <div className="mt-4 text-center">
                                         <p className="text-green-600 text-sm">✓ Image Uploaded Successfully</p>
@@ -545,10 +832,22 @@ const App = ({ onLogout }) => {
                             </div>
                             <div>
                                 <label className="block text-gray-700 font-bold mb-2">Building Photo *</label>
-                                <input type="file" name="buildingPhoto" id="buildingPhoto" accept="image/*" onChange={handleFileChange} className="hidden" required />
-                                <label htmlFor="buildingPhoto" className="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-lg cursor-pointer transition-colors w-full text-center block">
-                                    Choose File
-                                </label>
+                                <input 
+                                    type="file" 
+                                    name="buildingPhoto" 
+                                    id="buildingPhoto" 
+                                    accept="image/*" 
+                                    onChange={handleFileChange} 
+                                 
+                                    required 
+                                />
+                                <button
+                                    type="button"
+                                    onClick={() => showPhotoOptions('building')}
+                                    className="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-lg cursor-pointer transition-colors w-full text-center block"
+                                >
+                                    Choose Photo
+                                </button>
                                 {formData.buildingPhotoBase64 && (
                                     <div className="mt-4 text-center">
                                         <p className="text-green-600 text-sm">✓ Image Uploaded Successfully</p>
@@ -570,92 +869,81 @@ const App = ({ onLogout }) => {
     };
 
     return (
-        <div className="p-8 min-h-screen bg-gray-100 relative font-sans">
-            {!isSubmitted ? (
-                <>
-                    <h2 className="text-4xl font-extrabold text-gray-800 mb-8 text-center">Property Survey Form</h2>
-                    {/* Step Indicators */}
-                    <div className="mb-8 flex justify-center space-x-4">
-                        <span className={`text-xl font-semibold w-10 h-10 flex items-center justify-center rounded-full transition-colors duration-300 ${step >= 1 ? 'bg-green-600 text-white' : 'bg-gray-300 text-gray-700'}`}>1</span>
-                        <span className={`text-xl font-semibold w-10 h-10 flex items-center justify-center rounded-full transition-colors duration-300 ${step >= 2 ? 'bg-green-600 text-white' : 'bg-gray-300 text-gray-700'}`}>2</span>
-                        <span className={`text-xl font-semibold w-10 h-10 flex items-center justify-center rounded-full transition-colors duration-300 ${step >= 3 ? 'bg-green-600 text-white' : 'bg-gray-300 text-gray-700'}`}>3</span>
-                        <span className={`text-xl font-semibold w-10 h-10 flex items-center justify-center rounded-full transition-colors duration-300 ${step >= 4 ? 'bg-green-600 text-white' : 'bg-gray-300 text-gray-700'}`}>4</span>
-                    </div>
+        <div className="min-h-screen bg-gray-100 flex items-center justify-center p-4">
+            <ToastContainer />
+            <div className="bg-white shadow-xl rounded-lg p-8 w-full max-w-4xl">
+                <div className="flex justify-center items-center mb-6">
+                    <h2 className="text-3xl font-bold text-black-600">Property Survey Form</h2>
+                </div>
 
-                    <div className="bg-white p-8 rounded-xl shadow-lg border border-gray-200 max-w-4xl mx-auto">
-                        {renderFormStep()}
-                        <div className="flex justify-between mt-8">
-                            {step > 1 && (
+                <div className="relative pt-1">
+                    <div className="flex mb-2 items-center justify-between">
+                        <div className="flex-1">
+                            <div className="text-xs text-green-600 text-right">Step {step} of 4</div>
+                        </div>
+                    </div>
+                    <div className="overflow-hidden h-2 mb-4 text-xs flex rounded bg-green-200">
+                        <div style={{ width: `${(step / 4) * 100}%` }} className="shadow-none flex flex-col text-center whitespace-nowrap text-white justify-center bg-green-500 transition-all duration-500"></div>
+                    </div>
+                </div>
+
+                <form onSubmit={handleSubmit} className="space-y-6">
+                    {isSubmitted ? (
+                        <div className="text-center p-8">
+                            <h3 className="text-3xl font-bold text-green-700 mb-4">Submission Successful! 🎉</h3>
+                            <p className="text-gray-600 mb-6">Thank you for submitting the form. Your data has been uploaded.</p>
+                            <div className='flex justify-between items-center'>
                                 <button
                                     type="button"
-                                    onClick={handlePrevious}
-                                    className="bg-gray-500 hover:bg-gray-600 text-white font-bold py-2 px-6 rounded-lg shadow-md transition-colors duration-300"
+                                    onClick={handleSubmitAnother}
+                                    className="bg-green-600 text-white font-bold py-3 px-6 rounded-lg hover:bg-green-700 transition-colors shadow-lg"
                                 >
-                                    Previous
+                                    Submit Another Response
                                 </button>
-                            )}
+                                <button type="button"
+                                    onClick={onLogout}
+                                    className="bg-red-500 text-white font-bold py-3 px-6 rounded-lg hover:bg-red-600 transition-colors"
+                                >
+                                    Logout
+                                </button>
+                            </div>
+                        </div>
+                    ) : (
+                        <>
+                            {renderFormStep()}
 
-                            <div className="ml-auto flex gap-4">
+                            <div className="flex justify-between mt-8">
+                                {step > 1 && (
+                                    <button
+                                        type="button"
+                                        onClick={handlePrevious}
+                                        className="bg-gray-400 text-white font-bold py-2 px-6 rounded-lg hover:bg-gray-500 transition-colors"
+                                    >
+                                        Previous
+                                    </button>
+                                )}
                                 {step < 4 ? (
                                     <button
                                         type="button"
                                         onClick={handleNext}
-                                        className="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-6 rounded-lg shadow-md transition-colors duration-300"
+                                        className="bg-green-600 text-white font-bold py-2 px-6 rounded-lg hover:bg-green-700 transition-colors ml-auto"
                                     >
                                         Next
                                     </button>
                                 ) : (
                                     <button
-                                        type="button"
-                                        onClick={handleSubmit}
+                                        type="submit"
                                         disabled={loading}
-                                        className="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-6 rounded-lg shadow-md transition-colors duration-300 disabled:bg-gray-400"
+                                        className={`bg-green-600 text-white font-bold py-2 px-6 rounded-lg transition-colors ml-auto ${loading ? 'opacity-50 cursor-not-allowed' : 'hover:bg-green-700'}`}
                                     >
                                         {loading ? 'Submitting...' : 'Submit'}
                                     </button>
                                 )}
                             </div>
-                        </div>
-                    </div>
-                </>
-            ) : (
-                // Success Screen
-                <div className="max-w-2xl mx-auto text-center">
-                    <div className="bg-white p-12 rounded-xl shadow-lg border border-gray-200">
-                        <div className="mb-8">
-                            <div className="mx-auto w-20 h-20 bg-green-100 rounded-full flex items-center justify-center">
-                                <svg className="w-12 h-12 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                                </svg>
-                            </div>
-                        </div>
-
-                        <h2 className="text-4xl font-extrabold text-green-600 mb-4">
-                            Form Submitted Successfully!
-                        </h2>
-
-                        <p className="text-lg text-gray-700 mb-8 leading-relaxed">
-                            Your property tax survey form has been successfully submitted. Click below to submit another response for a different property or Click Logout Button to Login with different credentials.
-                        </p>
-
-                        <div className="flex justify-center space-x-4">
-                            <button
-                                onClick={handleSubmitAnother}
-                                className="bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-8 rounded-lg shadow-md transition-colors duration-300 text-lg"
-                            >
-                                Submit Another Response
-                            </button>
-                            <button
-                                onClick={onLogout}
-                                className="bg-red-500 hover:bg-red-600 text-white font-bold py-3 px-8 rounded-lg shadow-md transition-colors duration-300 text-lg"
-                            >
-                                Logout
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            )}
-            <ToastContainer />
+                        </>
+                    )}
+                </form>
+            </div>
         </div>
     );
 };

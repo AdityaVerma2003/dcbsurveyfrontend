@@ -25,21 +25,11 @@ function App() {
     }
   }, []);
 
-  const handleLogin = (token, isAdmin) => {
-    localStorage.setItem('token', token);
-    localStorage.setItem('isAdmin', isAdmin);
-    setIsAuth(true);
-    setIsAdmin(isAdmin);
-    if (isAdmin) {
-      navigate('/admin-dashboard');
-    } else {
-      navigate('/instructions');
-    }
-  };
-
+ 
   const handleLogout = () => {  
     localStorage.removeItem('token');
     localStorage.removeItem('isAdmin');
+    localStorage.removeItem('name'); // Clear the name from localStorage
     setIsAuth(false);
     setIsAdmin(false);
     navigate('/login');
