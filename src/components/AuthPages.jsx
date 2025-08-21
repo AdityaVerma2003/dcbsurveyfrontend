@@ -1,10 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { User, Lock, Eye, EyeOff, LogIn, XCircle, CheckCircle } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 
 // This component is now a dedicated Login page. The Register and navigation
 // components have been removed for a streamlined experience.
 const AuthPages = () => {
   // State for form data and UI feedback
+    const navigate = useNavigate();
   const [showPassword, setShowPassword] = useState(false);
   const [formData, setFormData] = useState({
     name: '',
@@ -28,7 +30,7 @@ const AuthPages = () => {
     }
     if (token) {
       setMessage({ type: 'success', text: 'You are already logged in!' });
-      window.location.href = "/form";
+      navigate("/form");
     }
   }, []);
 
@@ -81,9 +83,9 @@ const AuthPages = () => {
         setMessage({ type: 'success', text: "Login successful! Redirecting..." });
 
         if (isAdmin) {
-          window.location.href = "/admin-dashboard";
+          navigate("/admin-dashboard");
         } else {
-          window.location.href = "/instructions";
+          navigate("/instructions");
         }
 
       } else {
