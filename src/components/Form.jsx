@@ -45,7 +45,7 @@ const App = ({ onLogout }) => {
     const [locationError, setLocationError] = useState('');
     const [errors, setErrors] = useState({});
     const [isSubmitted, setIsSubmitted] = useState(false);
-    
+
     // Camera states
     const [showCamera, setShowCamera] = useState(false);
     const [currentPhotoType, setCurrentPhotoType] = useState('');
@@ -68,9 +68,9 @@ const App = ({ onLogout }) => {
     const startCamera = async (photoType) => {
         setCurrentPhotoType(photoType);
         setShowCamera(true);
-        
+
         try {
-            const stream = await navigator.mediaDevices.getUserMedia({ 
+            const stream = await navigator.mediaDevices.getUserMedia({
                 video: { facingMode: 'environment' } // Use back camera on mobile
             });
             if (videoRef.current) {
@@ -86,13 +86,13 @@ const App = ({ onLogout }) => {
     const capturePhoto = () => {
         const video = videoRef.current;
         const canvas = canvasRef.current;
-        
+
         if (video && canvas) {
             const context = canvas.getContext('2d');
             canvas.width = video.videoWidth;
             canvas.height = video.videoHeight;
             context.drawImage(video, 0, 0);
-            
+
             canvas.toBlob((blob) => {
                 const file = new File([blob], `${currentPhotoType}.jpg`, { type: 'image/jpeg' });
                 handleCapturedPhoto(file);
@@ -139,7 +139,7 @@ const App = ({ onLogout }) => {
             { text: 'Take Photo', action: () => startCamera(photoType) },
             { text: 'Upload from Device', action: () => document.getElementById(photoType + 'Photo').click() }
         ];
-        
+
         // Create a simple modal-like experience
         const choice = window.confirm('Would you like to take a photo with camera? Click OK for Camera, Cancel to upload from device.');
         if (choice) {
@@ -207,7 +207,7 @@ const App = ({ onLogout }) => {
                             setLocationError('Could not fetch address details. Please enter manually.');
 
                         }
-                    },      
+                    },
                     (error) => {
                         setLocationError('Location permission denied. Please enter address manually.');
                     }
@@ -529,7 +529,7 @@ const App = ({ onLogout }) => {
                                     if (/[0-9]/.test(e.key)) {
                                         e.preventDefault();
                                     }
-                                }}/>
+                                }} />
                                 {errors.fatherName && <p className="text-red-500 text-xs mt-1">{errors.fatherName}</p>}
                             </div>
                             <div>
@@ -540,7 +540,7 @@ const App = ({ onLogout }) => {
                                     if (/[0-9]/.test(e.key)) {
                                         e.preventDefault();
                                     }
-                                }}/>
+                                }} />
                                 {errors.motherName && <p className="text-red-500 text-xs mt-1">{errors.motherName}</p>}
                             </div>
                             <div>
@@ -583,34 +583,34 @@ const App = ({ onLogout }) => {
                                     <div>
                                         <label className="block text-green-800 font-bold mb-2">Owner's Name *</label>
                                         <input type="text" name="tenantDetails.ownerName" value={formData.tenantDetails.ownerName} onChange={handleChange} className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 transition-colors" required onKeyDown={(e) => {
-                                    // Check if the key pressed is a number (0-9)
-                                    // You can also check for numpad numbers
-                                    if (/[0-9]/.test(e.key)) {
-                                        e.preventDefault();
-                                    }
-                                }}/>
+                                            // Check if the key pressed is a number (0-9)
+                                            // You can also check for numpad numbers
+                                            if (/[0-9]/.test(e.key)) {
+                                                e.preventDefault();
+                                            }
+                                        }} />
                                         {errors.ownerName && <p className="text-red-500 text-xs mt-1">{errors.ownerName}</p>}
                                     </div>
                                     <div>
                                         <label className="block text-green-800 font-bold mb-2">Owner's Father / Spouse Name *</label>
                                         <input type="text" name="tenantDetails.ownerFatherName" value={formData.tenantDetails.ownerFatherName} onChange={handleChange} className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 transition-colors" required onKeyDown={(e) => {
-                                    // Check if the key pressed is a number (0-9)
-                                    // You can also check for numpad numbers
-                                    if (/[0-9]/.test(e.key)) {
-                                        e.preventDefault();
-                                    }
-                                }}/>
+                                            // Check if the key pressed is a number (0-9)
+                                            // You can also check for numpad numbers
+                                            if (/[0-9]/.test(e.key)) {
+                                                e.preventDefault();
+                                            }
+                                        }} />
                                         {errors.ownerFatherName && <p className="text-red-500 text-xs mt-1">{errors.ownerFatherName}</p>}
                                     </div>
                                     <div>
                                         <label className="block text-green-800 font-bold mb-2">Owner's Mother's Name *</label>
                                         <input type="text" name="tenantDetails.ownerMotherName" value={formData.tenantDetails.ownerMotherName} onChange={handleChange} className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 transition-colors" required onKeyDown={(e) => {
-                                    // Check if the key pressed is a number (0-9)
-                                    // You can also check for numpad numbers
-                                    if (/[0-9]/.test(e.key)) {
-                                        e.preventDefault();
-                                    }
-                                }}/>
+                                            // Check if the key pressed is a number (0-9)
+                                            // You can also check for numpad numbers
+                                            if (/[0-9]/.test(e.key)) {
+                                                e.preventDefault();
+                                            }
+                                        }} />
                                         {errors.ownerMotherName && <p className="text-red-500 text-xs mt-1">{errors.ownerMotherName}</p>}
                                     </div>
                                     <div>
@@ -766,99 +766,133 @@ const App = ({ onLogout }) => {
                 return (
                     <>
                         <h3 className="text-2xl font-bold text-gray-700 mb-6 text-center">Step 4: Upload Photos</h3>
-                        
+
                         {/* Camera Modal */}
                         {showCamera && (
-                            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-                                <div className="bg-white p-6 rounded-lg max-w-md w-full mx-4">
-                                    <h4 className="text-lg font-bold mb-4">Take Photo</h4>
-                                    <video
-                                        ref={videoRef}
-                                        autoPlay
-                                        playsInline
-                                        className="w-full h-64 bg-gray-200 rounded"
-                                    />
-                                    <canvas ref={canvasRef} className="hidden" />
-                                    <div className="flex gap-4 mt-4">
-                                        <button
-                                            type="button"
-                                            onClick={capturePhoto}
-                                            className="flex-1 bg-green-600 text-white py-2 px-4 rounded hover:bg-green-700"
-                                        >
-                                            Capture
-                                        </button>
-                                        <button
-                                            type="button"
-                                            onClick={stopCamera}
-                                            className="flex-1 bg-gray-600 text-white py-2 px-4 rounded hover:bg-gray-700"
-                                        >
-                                            Cancel
-                                        </button>
-                                    </div>
+                            <div className="fixed inset-0 bg-black z-50 flex flex-col">
+                                {/* Video Preview */}
+                                <video
+                                    ref={videoRef}
+                                    autoPlay
+                                    playsInline
+                                    className="flex-1 w-full object-contain bg-black"
+                                />
+                                <canvas ref={canvasRef} className="hidden" />
+
+                                {/* Controls */}
+                                <div className="p-4 bg-black flex gap-4">
+                                    <button
+                                        type="button"
+                                        onClick={capturePhoto}
+                                        className="flex-1 bg-green-600 text-white py-3 rounded-lg font-bold text-lg hover:bg-green-700 transition"
+                                    >
+                                        📸 Capture
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={stopCamera}
+                                        className="flex-1 bg-gray-600 text-white py-3 rounded-lg font-bold text-lg hover:bg-gray-700 transition"
+                                    >
+                                        ❌ Cancel
+                                    </button>
                                 </div>
                             </div>
                         )}
 
+
                         <div className="grid md:grid-cols-2 gap-6">
+                            {/* Main Gate Photo */}
                             <div>
                                 <label className="block text-gray-700 font-bold mb-2">Main Gate Photo *</label>
-                                <input 
-                                    type="file" 
-                                    name="mainGatePhoto" 
-                                    id="mainGatePhoto" 
-                                    accept="image/*" 
-                                    onChange={handleFileChange} 
-                                    
-                                    required 
+
+                                {/* Hidden input for device upload */}
+                                <input
+                                    type="file"
+                                    name="mainGatePhoto"
+                                    id="mainGatePhoto"
+                                    accept="image/*"
+                                    onChange={handleFileChange}
+                                    className="hidden"
+                                    required
                                 />
-                                <button
-                                    type="button"
-                                    onClick={() => showPhotoOptions('mainGate')}
-                                    className="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-lg cursor-pointer transition-colors w-full text-center block"
-                                >
-                                    Choose Photo
-                                </button>
+
+                                {/* Buttons Row */}
+                                <div className="flex gap-3">
+                                    <button
+                                        type="button"
+                                        onClick={() => document.getElementById("mainGatePhoto").click()}
+                                        className="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg cursor-pointer transition-colors text-center"
+                                    >
+                                        Upload from Device
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={() => startCamera("mainGate")}
+                                        className="flex-1 bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-lg cursor-pointer transition-colors text-center"
+                                    >
+                                        Camera
+                                    </button>
+                                </div>
+
                                 {formData.mainGatePhotoBase64 && (
                                     <div className="mt-4 text-center">
                                         <p className="text-green-600 text-sm">✓ Image Uploaded Successfully</p>
                                         <img
                                             src={formData.mainGatePhotoBase64}
                                             alt="Main Gate Preview"
-                                            className="mt-2 w-full h-48 object-cover rounded border border-gray-300"
+                                            className="mt-2 w-full max-w-xs mx-auto h-auto object-contain rounded border border-gray-300"
                                         />
                                     </div>
                                 )}
-                                {errors.mainGatePhoto && <p className="text-red-500 text-xs mt-1">{errors.mainGatePhoto}</p>}
+                                {errors.mainGatePhoto && (
+                                    <p className="text-red-500 text-xs mt-1">{errors.mainGatePhoto}</p>
+                                )}
                             </div>
+
+                            {/* Building Photo */}
                             <div>
                                 <label className="block text-gray-700 font-bold mb-2">Building Photo *</label>
-                                <input 
-                                    type="file" 
-                                    name="buildingPhoto" 
-                                    id="buildingPhoto" 
-                                    accept="image/*" 
-                                    onChange={handleFileChange} 
-                                 
-                                    required 
+
+                                <input
+                                    type="file"
+                                    name="buildingPhoto"
+                                    id="buildingPhoto"
+                                    accept="image/*"
+                                    onChange={handleFileChange}
+                                    className="hidden"
+                                    required
                                 />
-                                <button
-                                    type="button"
-                                    onClick={() => showPhotoOptions('building')}
-                                    className="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-lg cursor-pointer transition-colors w-full text-center block"
-                                >
-                                    Choose Photo
-                                </button>
+
+                                <div className="flex gap-3">
+                                    <button
+                                        type="button"
+                                        onClick={() => document.getElementById("buildingPhoto").click()}
+                                        className="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg cursor-pointer transition-colors text-center"
+                                    >
+                                        Upload from Device
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={() => startCamera("building")}
+                                        className="flex-1 bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-lg cursor-pointer transition-colors text-center"
+                                    >
+                                        Camera
+                                    </button>
+                                </div>
+
                                 {formData.buildingPhotoBase64 && (
                                     <div className="mt-4 text-center">
                                         <p className="text-green-600 text-sm">✓ Image Uploaded Successfully</p>
                                         <img
                                             src={formData.buildingPhotoBase64}
                                             alt="Building Preview"
-                                            className="mt-2 w-full h-48 object-cover rounded border border-gray-300"
+                                            className="mt-2 w-full max-w-xs mx-auto h-auto object-contain rounded border border-gray-300"
                                         />
                                     </div>
                                 )}
-                                {errors.buildingPhoto && <p className="text-red-500 text-xs mt-1">{errors.buildingPhoto}</p>}
+                                {errors.buildingPhoto && (
+                                    <p className="text-red-500 text-xs mt-1">{errors.buildingPhoto}</p>
+                                )}
                             </div>
                         </div>
                     </>
