@@ -5,7 +5,8 @@ import { User, Smartphone, Lock, ChevronLeft } from 'lucide-react';
 
 const SurveyorRegistrationForm = ({ setActiveView }) => {
   const [formData, setFormData] = useState({
-    name: '',
+    fullName: '',
+    username: '',
     phone: '',
     password: '',
   });
@@ -28,11 +29,10 @@ const SurveyorRegistrationForm = ({ setActiveView }) => {
 
     try {
       // NOTE: Replace this with your actual API endpoint for registering a surveyor
-      const response = await axios.post(`${API_BASE_URL}/api/auth/register`, formData);
-      console.log('Registration successful:', response.data);
+      await axios.post(`${API_BASE_URL}/api/auth/register`, formData);
       toast.success('Surveyor registered successfully!');
-      setFormData({ name: '', phone: '', password: '' }); // Clear form
-      setActiveView('dashboard'); // Navigate back to dashboard on success
+      setFormData({ fullName: '', username: '', phone: '', password: '' }); // Clear form
+      setActiveView('dashboard');
     } catch (error) {
       console.error('Registration error:', error);
       toast.error(error.response?.data?.message || 'Registration failed. Please try again.');
@@ -57,8 +57,8 @@ const SurveyorRegistrationForm = ({ setActiveView }) => {
       <form onSubmit={handleSubmit} className="space-y-6">
         {/* Name Field */}
         <div>
-          <label htmlFor="name" className="block text-sm font-medium text-gray-700">
-            Full Name
+          <label htmlFor="fullName" className="block text-sm font-medium text-gray-700">
+            Surveyor Full Name
           </label>
           <div className="mt-1 relative rounded-md shadow-sm">
             <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -66,9 +66,9 @@ const SurveyorRegistrationForm = ({ setActiveView }) => {
             </div>
             <input
               type="text"
-              name="name"
-              id="name"
-              value={formData.name}
+              name="fullName"
+              id="fullName"
+              value={formData.fullName}
               onChange={handleChange}
               required
               className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
@@ -76,7 +76,27 @@ const SurveyorRegistrationForm = ({ setActiveView }) => {
             />
           </div>
         </div>
-
+       {/* userName Field */}
+        <div>
+          <label htmlFor="username" className="block text-sm font-medium text-gray-700">
+            Username
+          </label>
+          <div className="mt-1 relative rounded-md shadow-sm">
+            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+              <User className="h-5 w-5 text-gray-400" />
+            </div>
+            <input
+              type="text"
+              name="username"
+              id="username"
+              value={formData.username}
+              onChange={handleChange}
+              required
+              className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+              placeholder="Enter username"
+            />
+          </div>
+        </div>
         {/* Phone Field */}
         <div>
           <label htmlFor="phone" className="block text-sm font-medium text-gray-700">

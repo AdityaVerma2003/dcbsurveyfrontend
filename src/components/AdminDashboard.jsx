@@ -5,6 +5,7 @@ import 'react-toastify/dist/ReactToastify.css';
 import { Users, FileText, Search, Download, Eye, Calendar, MapPin, User, Building, LogOut, XCircle, ChevronLeft, ChevronRight, Camera } from 'lucide-react';
 import SurveyorRegistrationForm from './SurveyorRegistration';
 
+
 const AdminDashboard = ({ onLogout }) => {
   const [data, setData] = useState([]);
   const [surveyors, setSurveyors] = useState([]);
@@ -127,6 +128,37 @@ const AdminDashboard = ({ onLogout }) => {
       });
     }
   };
+  const handleDeleteEntry = async (id) => {
+    if (!window.confirm("Are you sure you want to delete this submission?")) return;
+
+    try {
+      await axios.delete(`${API_BASE_URL}/api/form/delete/${id}`);
+      toast.success("Entry deleted successfully!");
+
+      // Update UI after deletion
+      setData((prev) => prev.filter((entry) => entry._id !== id));
+      setFilteredData((prev) => prev.filter((entry) => entry._id !== id));
+    } catch (err) {
+      console.error("Error deleting entry:", err);
+      toast.error("Failed to delete entry. Please try again.");
+    }
+  };
+  const handleDeleteSurveyor = async (name) => {
+    if (!window.confirm(`Are you sure you want to delete surveyor "${name}"?`)) return;
+
+    try {
+      await axios.delete(`${API_BASE_URL}/api/auth/delete/${name}`); // Assuming backend deletes by name or ID
+
+      toast.success("Surveyor deleted successfully!");
+
+      // Update UI
+      setSurveyors((prev) => prev.filter((s) => s.name !== name));
+    } catch (err) {
+      console.error("Error deleting surveyor:", err);
+      toast.error("Failed to delete surveyor. Please try again.");
+    }
+  };
+
 
   const StatCard = ({ title, value, icon: Icon, color }) => (
     <div className="bg-white rounded-xl shadow-md p-6 border-l-4" style={{ borderLeftColor: color }}>
@@ -300,7 +332,7 @@ const AdminDashboard = ({ onLogout }) => {
                   and have access to the necessary tools and resources.
                 </p>
                 <div className="flex justify-center mt-4">
-                   <div className="bg-blue-500 text-white rounded-lg px-6 py-2 text-center">Register</div>
+                  <div className="bg-blue-500 text-white rounded-lg px-6 py-2 text-center">Register</div>
                 </div>
               </button>
 
@@ -351,6 +383,13 @@ const AdminDashboard = ({ onLogout }) => {
                           <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-green-100 text-green-800">
                             {surveyor.submissions} submissions
                           </span>
+                          <button
+                            onClick={() => handleDeleteSurveyor(surveyor.name)}
+                            className="flex items-center text-red-600 hover:text-red-900 transition-colors"
+                          >
+                            <XCircle className="w-4 h-4 mr-1" />
+                            Delete
+                          </button>
                         </div>
                       </div>
                     </div>
@@ -504,6 +543,13 @@ const AdminDashboard = ({ onLogout }) => {
                               <Eye className="w-4 h-4 mr-1" />
                               View Details
                             </button>
+                            <button
+                              onClick={() => handleDeleteEntry(entry._id)}
+                              className="flex items-center text-red-600 hover:text-red-900 transition-colors"
+                            >
+                              <XCircle className="w-4 h-4 mr-1" />
+                              Delete
+                            </button>
                           </td>
                         </tr>
                       ))}
@@ -540,8 +586,8 @@ const AdminDashboard = ({ onLogout }) => {
           </div>
         )}
         {activeView === 'register' && (
-        <SurveyorRegistrationForm setActiveView={setActiveView} />
-      )}
+          <SurveyorRegistrationForm setActiveView={setActiveView} />
+        )}
       </div>
 
       {/* Details Modal */}

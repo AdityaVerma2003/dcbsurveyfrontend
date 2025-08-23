@@ -1,15 +1,17 @@
 import React, { useState, useEffect } from 'react';
 import { User, Lock, Eye, EyeOff, LogIn, XCircle, CheckCircle } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { useLocation } from "react-router-dom";
 
 // This component is now a dedicated Login page. The Register and navigation
 // components have been removed for a streamlined experience.
 const AuthPages = () => {
   // State for form data and UI feedback
-    const navigate = useNavigate();
+     const navigate = useNavigate();
+  const location = useLocation();
   const [showPassword, setShowPassword] = useState(false);
   const [formData, setFormData] = useState({
-    name: '',
+    username: '',
     password: '',
   });
   const [errors, setErrors] = useState({});
@@ -22,16 +24,11 @@ const AuthPages = () => {
 
   // This useEffect hook checks for an existing token on component mount
   // and redirects the user if they are already logged in.
-  useEffect(() => {
-    const token = localStorage.getItem("token");
-    const name = localStorage.getItem("name");
-    if (token) {
-      setMessage({ type: 'success', text: `Welcome back, ${name}!` });
-    }
-    if (token) {
-      setMessage({ type: 'success', text: 'You are already logged in!' });
-      navigate("/form");
-    }
+ useEffect(() => {
+    const isAdmin = localStorage.getItem("isAdmin");
+      if (isAdmin) {
+        navigate("/admin-dashboard");
+      } 
   }, []);
 
   const handleInputChange = (e) => {
@@ -49,7 +46,7 @@ const AuthPages = () => {
   // Helper function to validate form fields
   const validateForm = () => {
     const newErrors = {};
-    if (!formData.name) newErrors.name = "name is required.";
+    if (!formData.username) newErrors.username = "Username is required.";
     if (!formData.password) newErrors.password = "Password is required.";
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
@@ -67,7 +64,7 @@ const AuthPages = () => {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          name: formData.name,
+          username: formData.username,
           password: formData.password,
         }),
       });
@@ -77,7 +74,7 @@ const AuthPages = () => {
         // Set a default value for isAdmin if it's not present in the user data
         const isAdmin = data.user.role === "admin";
         localStorage.setItem("token", data.token);
-        localStorage.setItem("name", data.user.name);
+        localStorage.setItem("name", data.user.username);
         localStorage.setItem("isAdmin", isAdmin.toString());
 
         setMessage({ type: 'success', text: "Login successful! Redirecting..." });
@@ -124,15 +121,15 @@ const AuthPages = () => {
                 <div className="relative">
                   <input
                     type="text"
-                    name="name"
-                    value={formData.name}
+                    name="username"
+                    value={formData.username}
                     onChange={handleInputChange}
-                    className={`w-full px-4 py-3 pl-11 border rounded-xl focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-all duration-300 bg-gray-50 focus:bg-white ${errors.name ? 'border-red-500' : 'border-gray-300'}`}
-                    placeholder="Enter your name"
+                    className={`w-full px-4 py-3 pl-11 border rounded-xl focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-all duration-300 bg-gray-50 focus:bg-white ${errors.username ? 'border-red-500' : 'border-gray-300'}`}
+                    placeholder="Enter your username"
                   />
                   <User className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
                 </div>
-                {errors.name && <p className="text-red-500 text-sm mt-1">{errors.name}</p>}
+                {errors.username && <p className="text-red-500 text-sm mt-1">{errors.username}</p>}
               </div>
               <div className="space-y-2">
                 <label className="text-sm font-semibold text-gray-700 flex items-center space-x-1">

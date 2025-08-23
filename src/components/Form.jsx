@@ -579,7 +579,7 @@ const App = ({ onLogout }) => {
                                 <div className="grid md:grid-cols-2 gap-6">
                                     <div>
                                         <label className="block text-green-800 font-bold mb-2">Monthly Rent *</label>
-                                        <input type="number" name="tenantDetails.monthlyRent" value={formData.tenantDetails.monthlyRent} onChange={handleChange} className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 transition-colors" required />
+                                        <input type="number" min="0" name="tenantDetails.monthlyRent" value={formData.tenantDetails.monthlyRent} onChange={handleChange} className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 transition-colors" required />
                                         {errors.monthlyRent && <p className="text-red-500 text-xs mt-1">{errors.monthlyRent}</p>}
                                     </div>
                                     <div>
@@ -641,7 +641,7 @@ const App = ({ onLogout }) => {
                                     </div>
                                     <div>
                                         <label className="block text-green-800 font-bold mb-2">ZIP/Postal Code *</label>
-                                        <input type="number" name="tenantDetails.zipCode" value={formData.tenantDetails.zipCode} onChange={handleChange} className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 transition-colors" required />
+                                        <input type="number" min="0" name="tenantDetails.zipCode" value={formData.tenantDetails.zipCode} onChange={handleChange} className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 transition-colors" required />
                                         {errors.tenantZipCode && <p className="text-red-500 text-xs mt-1">{errors.tenantZipCode}</p>}
                                     </div>
                                 </div>
@@ -661,6 +661,7 @@ const App = ({ onLogout }) => {
                                 <input
                                     type="number"
                                     name="areaOfPlot"
+                                    min="0"
                                     value={formData.areaOfPlot}
                                     onChange={handleChange}
                                     className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 transition-colors"
@@ -735,6 +736,7 @@ const App = ({ onLogout }) => {
                                 <label className="block text-gray-700 font-bold mb-2">Floor Area (sq ft) *</label>
                                 <input
                                     type="number"
+                                    min="0"
                                     name="floorArea"
                                     value={formData.floorArea}
                                     onChange={handleChange}
