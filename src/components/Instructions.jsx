@@ -1,7 +1,7 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 
-const Instructions = () => {
+const Instructions = ({ onLogout }) => {
   const navigate = useNavigate();
 
   return (
@@ -27,6 +27,12 @@ const Instructions = () => {
         className="bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-8 rounded-lg shadow-md transition duration-300 transform hover:scale-105"
       >
         Proceed to Form
+      </button>
+       <button
+        onClick={onLogout}
+        className="bg-red-600 hover:bg-red-700 text-white font-bold py-3 px-8 rounded-lg shadow-md transition duration-300 transform hover:scale-105"
+      >
+        Logout
       </button>
     </div>
   );

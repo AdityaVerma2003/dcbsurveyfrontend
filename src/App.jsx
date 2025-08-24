@@ -43,7 +43,7 @@ function App() {
         <Header />
         <Routes>
           <Route path="/auth" element={<AuthPages  />} /> {/* <-- Pass handleLogin to AuthPages */}
-          <Route path="/instructions" element={ <Instructions /> } />
+          <Route path="/instructions" element={ <Instructions onLogout={handleLogout} />  } />
           <Route path="/form" element={<Form onLogout={handleLogout} />} />
           {/* 2. Wrap the AdminDashboard route with the new ProtectedRoute component */}
           <Route path="/admin-dashboard" element={<ProtectedRoute><AdminDashboard  onLogout={handleLogout} /></ProtectedRoute>} />
