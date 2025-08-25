@@ -16,7 +16,7 @@ const Instructions = ({ onLogout }) => {
         <ul className="list-disc list-inside text-left text-gray-700 space-y-3">
           <li>Before the form opens, a pop-up will appear requesting your current location. Please grant this permission.</li>
           <li>Keep your property documents (ownership proof, previous tax receipts) ready.</li>
-          <li> Enter your personal and property details as required in the form.</li>
+          <li> Enter Household details as required in the form.</li>
           <li>All fields marked with an asterisk (*) are mandatory. Please ensure you fill them out accurately.</li>
           <li>Once all fields are filled and validated, you can click "Submit" to complete the survey.</li>
         </ul>

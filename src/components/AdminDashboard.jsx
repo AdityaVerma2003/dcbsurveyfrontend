@@ -177,6 +177,7 @@ const AdminDashboard = ({ onLogout }) => {
   // Function to handle showing the details modal
   const handleViewDetails = (entry) => {
     setSelectedEntry(entry);
+    console.log("Selected Entry:", entry);
   };
 
   // Function to handle closing the details modal
@@ -646,7 +647,8 @@ const AdminDashboard = ({ onLogout }) => {
                     <p><strong>Property Status:</strong> {selectedEntry.ownerOrTenant}</p>
                     <p><strong>Area of Plot:</strong> {selectedEntry.areaOfPlot}</p>
                     <p><strong>Nature of Building:</strong> {selectedEntry.natureOfBuilding}</p>
-                    <p><strong>Number of Floors:</strong> {Array.isArray(selectedEntry.numberOfFloors) ? selectedEntry.numberOfFloors.join(', ') : selectedEntry.numberOfFloors}</p>
+                    <p><strong>Number of Floors:</strong> {selectedEntry.numberOfFloors}</p>
+                    <p><strong>Floor:</strong> {selectedEntry.floor}</p>
                     <p><strong>Floor Area:</strong> {selectedEntry.floorArea}</p>
                     <p><strong>Usage Type:</strong> {selectedEntry.usageType}</p>
                     <p><strong>Coordinates:</strong> {selectedEntry.latitude}, {selectedEntry.longitude}</p>

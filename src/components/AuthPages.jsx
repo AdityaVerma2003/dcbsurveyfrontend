@@ -7,7 +7,7 @@ import { useLocation } from "react-router-dom";
 // components have been removed for a streamlined experience.
 const AuthPages = () => {
   // State for form data and UI feedback
-     const navigate = useNavigate();
+  const navigate = useNavigate();
   const location = useLocation();
   const [showPassword, setShowPassword] = useState(false);
   const [formData, setFormData] = useState({

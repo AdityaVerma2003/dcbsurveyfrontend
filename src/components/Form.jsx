@@ -32,14 +32,14 @@ const App = ({ onLogout }) => {
         },
         areaOfPlot: '',
         natureOfBuilding: '',
-        numberOfFloors: [],
+        numberOfFloors: '', // Changed from array to string
         floorArea: '',
         usageType: '',
         mainGatePhoto: null,
         buildingPhoto: null,
         mainGatePhotoBase64: '',
         buildingPhotoBase64: '',
-        floor: [], // Add the new 'floor' field here
+        floor: '', // Changed from array to string
     });
     const [loading, setLoading] = useState(false);
     const [locationError, setLocationError] = useState('');
@@ -243,6 +243,7 @@ const App = ({ onLogout }) => {
             if (!formData.occupiersName.trim()) newErrors.occupiersName = 'Occupier\'s Name is required.';
             if (!formData.gender) newErrors.gender = 'Gender is required.';
             if (!formData.fatherName.trim()) newErrors.fatherName = 'Father\'s Name is required.';
+            if (!formData.motherName.trim()) newErrors.motherName = 'Mother\'s Name is required.';
             if (!formData.contactNumber || !/^\d{10}$/.test(formData.contactNumber)) newErrors.contactNumber = 'Contact Number must be a 10-digit number.';
             if (formData.ownerOrTenant === 'Tenant') {
                 if (!formData.tenantDetails.monthlyRent || isNaN(formData.tenantDetails.monthlyRent)) newErrors.monthlyRent = 'Monthly Rent is required and must be a number.';
@@ -256,13 +257,13 @@ const App = ({ onLogout }) => {
         } else if (step === 3) {
             if (!formData.areaOfPlot || isNaN(formData.areaOfPlot)) newErrors.areaOfPlot = 'Area of Plot is required and must be a number.';
             if (!formData.natureOfBuilding) newErrors.natureOfBuilding = 'Nature of Building is required.';
-            if (formData.numberOfFloors.length === 0) newErrors.numberOfFloors = 'At least one floor must be selected.';
+            if (!formData.numberOfFloors) newErrors.numberOfFloors = 'Number of floors must be selected.';
             if (!formData.floorArea || isNaN(formData.floorArea)) newErrors.floorArea = 'Floor Area is required and must be a number.';
             if (!formData.usageType) newErrors.usageType = 'Usage Type is required.';
         } else if (step === 4) {
             if (!formData.mainGatePhotoBase64) newErrors.mainGatePhoto = 'Main Gate photo is required.';
             if (!formData.buildingPhotoBase64) newErrors.buildingPhoto = 'Building photo is required.';
-            if (formData.floor.length === 0) newErrors.floor = 'At least one floor must be selected.';
+            if (!formData.floor) newErrors.floor = 'Floor must be selected.';
         }
         setErrors(newErrors);
         return Object.keys(newErrors).length === 0;
@@ -271,25 +272,7 @@ const App = ({ onLogout }) => {
     const handleChange = (e) => {
         const { name, value, type, checked } = e.target;
 
-        if (type === 'checkbox') {
-            if (name === 'numberOfFloors') {
-                // Handle numberOfFloors checkboxes
-                const newFloors = checked
-                    ? [...formData.numberOfFloors, value]
-                    : formData.numberOfFloors.filter((floor) => floor !== value);
-
-                setFormData({ ...formData, numberOfFloors: newFloors });
-            }
-            else if (name === 'floor') {
-                // Handle floor checkboxes
-                const newFloor = checked
-                    ? [...formData.floor, value]
-                    : formData.floor.filter((floor) => floor !== value);
-
-                setFormData({ ...formData, floor: newFloor });
-            }
-        }
-        else if (name.startsWith('tenantDetails.')) {
+        if (name.startsWith('tenantDetails.')) {
             // Handle nested tenantDetails object
             const field = name.split('.')[1];
             setFormData({
@@ -298,7 +281,7 @@ const App = ({ onLogout }) => {
             });
         }
         else {
-            // Handle all other inputs
+            // Handle all other inputs (including the new dropdown fields)
             setFormData({ ...formData, [name]: value });
         }
     };
@@ -420,14 +403,14 @@ const App = ({ onLogout }) => {
             },
             areaOfPlot: '',
             natureOfBuilding: '',
-            numberOfFloors: [],
+            numberOfFloors: '', // Reset to empty string
             floorArea: '',
             usageType: '',
             mainGatePhoto: null,
             buildingPhoto: null,
             mainGatePhotoBase64: '',
             buildingPhotoBase64: '',
-            floor: [],
+            floor: '', // Reset to empty string
         });
         setStep(1);
         setIsSubmitted(false);
@@ -535,8 +518,8 @@ const App = ({ onLogout }) => {
                                 {errors.fatherName && <p className="text-red-500 text-xs mt-1">{errors.fatherName}</p>}
                             </div>
                             <div>
-                                <label className="block text-gray-700 font-bold mb-2">Mother's Name </label>
-                                <input type="text" name="motherName" value={formData.motherName} onChange={handleChange} className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 transition-colors" onKeyDown={(e) => {
+                                <label className="block text-gray-700 font-bold mb-2">Mother's Name* </label>
+                                <input type="text" name="motherName" value={formData.motherName} onChange={handleChange} required className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 transition-colors" onKeyDown={(e) => {
                                     // Check if the key pressed is a number (0-9)
                                     // You can also check for numpad numbers
                                     if (/[0-9]/.test(e.key)) {
@@ -682,53 +665,33 @@ const App = ({ onLogout }) => {
                                 >
                                     <option value="">Select Type</option>
                                     <option value="Flat">Flat</option>
-                                    <option value="Builder Floor">Builder Floor</option>
-                                    <option value="Residential">Residential</option>
-                                    <option value="Commercial">Commercial</option>
+                                    <option value="Part of Building">Part of Building</option>
+                                    <option value="Independent Building">Independent Building</option>
+                                    <option value="Vacant Land">Vacant Land</option>
                                 </select>
                                 {errors.natureOfBuilding && <p className="text-red-500 text-sm mt-1">{errors.natureOfBuilding}</p>}
                             </div>
 
-                            {/* Number of Floors checkbox field */}
+                            {/* Number of Floors dropdown field */}
                             <div className="flex flex-col">
                                 <label className="block text-gray-700 font-bold mb-2">Number of floors *</label>
-                                <div className="flex flex-wrap gap-4">
-                                    {['Basement', '1', '2', '3', '4', '5'].map((floor) => (
-                                        <label key={floor} className="flex items-center space-x-2 text-gray-600 cursor-pointer">
-                                            <input
-                                                type="checkbox"
-                                                name="numberOfFloors"
-                                                value={floor}
-                                                checked={formData.numberOfFloors.includes(floor)}
-                                                onChange={handleChange}
-                                                className="form-checkbox h-5 w-5 text-green-600 rounded-md transition-colors duration-200"
-                                            />
-                                            <span>{floor}</span>
-                                        </label>
-                                    ))}
-                                </div>
+                                <select
+                                    name="numberOfFloors"
+                                    value={formData.numberOfFloors}
+                                    onChange={handleChange}
+                                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 transition-colors"
+                                    required
+                                >
+                                    <option value="">Select Number of Floors</option>
+                                    <option value="Nil">Nil</option>
+                                    <option value="Ground Floor">Ground Floor</option>
+                                    <option value="First Floor">First Floor</option>
+                                    <option value="Second Floor">Second Floor</option>
+                                    <option value="Third Floor">Third Floor</option>
+                                    <option value="Fourth Floor">Fourth Floor</option>
+                                    <option value="Fifth Floor">Fifth Floor</option>
+                                </select>
                                 {errors.numberOfFloors && <p className="text-red-500 text-sm mt-1">{errors.numberOfFloors}</p>}
-                            </div>
-
-                            {/* Floor checkbox field (FIXED) */}
-                            <div className="flex flex-col">
-                                <label className="block text-gray-700 font-bold mb-2">Floor *</label>
-                                <div className="flex flex-wrap gap-4">
-                                    {['Basement', '1', '2', '3', '4', '5'].map((floor) => (
-                                        <label key={floor} className="flex items-center space-x-2 text-gray-600 cursor-pointer">
-                                            <input
-                                                type="checkbox"
-                                                name="floor"
-                                                value={floor}
-                                                checked={formData.floor.includes(floor)}
-                                                onChange={handleChange}
-                                                className="form-checkbox h-5 w-5 text-green-600 rounded-md transition-colors duration-200"
-                                            />
-                                            <span>{floor}</span>
-                                        </label>
-                                    ))}
-                                </div>
-                                {errors.floor && <p className="text-red-500 text-sm mt-1">{errors.floor}</p>}
                             </div>
 
                             {/* Floor Area field */}
@@ -761,6 +724,27 @@ const App = ({ onLogout }) => {
                                     <option value="Commercial">Commercial</option>
                                 </select>
                                 {errors.usageType && <p className="text-red-500 text-sm mt-1">{errors.usageType}</p>}
+                            </div>
+
+                            {/* Floor dropdown field */}
+                            <div className="flex flex-col">
+                                <label className="block text-gray-700 font-bold mb-2">Floor *</label>
+                                <select
+                                    name="floor"
+                                    value={formData.floor}
+                                    onChange={handleChange}
+                                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 transition-colors"
+                                    required
+                                >
+                                    <option value="">Select Floor</option>
+                                    <option value="Ground Floor">Ground Floor</option>
+                                    <option value="First Floor">First Floor</option>
+                                    <option value="Second Floor">Second Floor</option>
+                                    <option value="Third Floor">Third Floor</option>
+                                    <option value="Fourth Floor">Fourth Floor</option>
+                                    <option value="Fifth Floor">Fifth Floor</option>
+                                </select>
+                                {errors.floor && <p className="text-red-500 text-sm mt-1">{errors.floor}</p>}
                             </div>
 
                         </div>
