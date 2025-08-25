@@ -737,6 +737,7 @@ const App = ({ onLogout }) => {
                                     required
                                 >
                                     <option value="">Select Floor</option>
+                                     <option value="Nil">Nil</option>
                                     <option value="Ground Floor">Ground Floor</option>
                                     <option value="First Floor">First Floor</option>
                                     <option value="Second Floor">Second Floor</option>
