@@ -84,50 +84,51 @@ const AdminDashboard = ({ onLogout }) => {
 
   const paginateSurveyors = (pageNumber) => setSurveyorsCurrentPage(pageNumber);
 
-  const downloadExcel = async () => {
-    try {
-      const loadingToast = toast.info("Generating and downloading Excel file...", { autoClose: false });
-      const response = await axios.get(`${API_BASE_URL}/api/form/download-excel`, {
-        responseType: 'blob', // Important to handle the binary file data
-      });
+ // inside AdminDashboard.jsx
 
-      const url = window.URL.createObjectURL(new Blob([response.data]));
-      const link = document.createElement('a');
-      link.href = url;
+const downloadExcel = async () => {
+  try {
+    const loadingToast = toast.info("Export started... Preparing Excel file", { autoClose: false });
 
-      const currentDate = new Date().toISOString().split('T')[0];
-      const filename = `property_survey_${filteredData.length}_records_${currentDate}.xlsx`;
+    const requestRes = await axios.post(`${API_BASE_URL}/api/export`, { filter: {} });
+    const jobId = requestRes.data.jobId;
 
-      link.setAttribute('download', filename);
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      window.URL.revokeObjectURL(url);
+    let downloadUrl = null;
+    while (!downloadUrl) {
+      await new Promise(r => setTimeout(r, 3000));
+      const statusRes = await axios.get(`${API_BASE_URL}/api/export/${jobId}/status`);
 
-      toast.dismiss(loadingToast);
-      toast.success('Excel File Downloaded Successfully!', {
-        position: "top-right",
-        autoClose: 5000,
-        hideProgressBar: false,
-        closeOnClick: true,
-        pauseOnHover: true,
-        draggable: true,
-        progress: undefined,
-      });
-
-    } catch (err) {
-      console.error('Error downloading Excel file:', err);
-      toast.error('Failed to download Excel file. Please try again.', {
-        position: "top-right",
-        autoClose: 5000,
-        hideProgressBar: false,
-        closeOnClick: true,
-        pauseOnHover: true,
-        draggable: true,
-        progress: undefined,
-      });
+      if (statusRes.data.status === "completed") {
+        downloadUrl = statusRes.data.downloadUrl;
+      } else if (statusRes.data.status === "failed") {
+        throw new Error("Excel job failed on server.");
+      } else {
+        // 🔥 Update progress in toast
+        toast.update(loadingToast, {
+          render: `Processing... ${statusRes.data.progress || 0}%`,
+          type: "info",
+          autoClose: false,
+        });
+      }
     }
-  };
+
+    // Trigger download
+    const link = document.createElement("a");
+    link.href = downloadUrl;
+    link.setAttribute("download", `property_survey_${new Date().toISOString().split("T")[0]}.xlsx`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+
+    toast.dismiss(loadingToast);
+    toast.success("Excel File Downloaded Successfully!", { position: "top-right" });
+  } catch (err) {
+    console.error("Error downloading Excel file:", err);
+    toast.error("Failed to export Excel file. Please try again.", { position: "top-right" });
+  }
+};
+
+
   const handleDeleteEntry = async (id) => {
     if (!window.confirm("Are you sure you want to delete this submission?")) return;
 
@@ -656,7 +657,7 @@ const AdminDashboard = ({ onLogout }) => {
                         <>
                           <p><strong>Building Photo:</strong></p>
                           <img
-                            src={`${API_BASE_URL}/api/form${selectedEntry.buildingPhoto}`}
+                            src={`${selectedEntry.buildingPhoto}`}
                             alt="Building"
                             style={{ width: "200px", borderRadius: "10px" }}
                           />
@@ -666,7 +667,7 @@ const AdminDashboard = ({ onLogout }) => {
                         <>
                           <p><strong>Main Gate Photo:</strong></p>
                           <img
-                            src={`${API_BASE_URL}/api/form${selectedEntry.mainGatePhoto}`}
+                            src={`${selectedEntry.mainGatePhoto}`}
                             alt="Main Gate"
                             style={{ width: "200px", borderRadius: "10px" }}
                           />
