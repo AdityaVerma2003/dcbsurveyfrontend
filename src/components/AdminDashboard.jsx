@@ -177,7 +177,6 @@ const AdminDashboard = ({ onLogout }) => {
   // Function to handle showing the details modal
   const handleViewDetails = (entry) => {
     setSelectedEntry(entry);
-    console.log("Selected Entry:", entry);
   };
 
   // Function to handle closing the details modal
@@ -652,6 +651,28 @@ const AdminDashboard = ({ onLogout }) => {
                     <p><strong>Floor Area:</strong> {selectedEntry.floorArea}</p>
                     <p><strong>Usage Type:</strong> {selectedEntry.usageType}</p>
                     <p><strong>Coordinates:</strong> {selectedEntry.latitude}, {selectedEntry.longitude}</p>
+                    <div style={{ display: "flex", gap: "20px", marginTop: "10px" }}>
+                      {selectedEntry.buildingPhoto && (
+                        <>
+                          <p><strong>Building Photo:</strong></p>
+                          <img
+                            src={`${API_BASE_URL}/api/form${selectedEntry.buildingPhoto}`}
+                            alt="Building"
+                            style={{ width: "200px", borderRadius: "10px" }}
+                          />
+                        </>
+                      )}
+                      {selectedEntry.mainGatePhoto && (
+                        <>
+                          <p><strong>Main Gate Photo:</strong></p>
+                          <img
+                            src={`${API_BASE_URL}/api/form${selectedEntry.mainGatePhoto}`}
+                            alt="Main Gate"
+                            style={{ width: "200px", borderRadius: "10px" }}
+                          />
+                        </>
+                      )}
+                    </div>
                   </div>
                 </div>
 

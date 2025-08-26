@@ -792,7 +792,7 @@ const App = ({ onLogout }) => {
                         <div className="grid md:grid-cols-2 gap-6">
                             {/* Main Gate Photo */}
                             <div>
-                                <label className="block text-gray-700 font-bold mb-2">Main Gate Photo *</label>
+                                <label className="btn block text-gray-700 font-bold mb-2" htmlFor="mainGatePhoto" >Main Gate Photo *</label>
 
                                 {/* Hidden input for device upload */}
                                 <input
