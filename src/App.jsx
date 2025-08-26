@@ -33,7 +33,7 @@ function App() {
     localStorage.removeItem('name'); // Clear the name from localStorage
     setIsAuth(false);
     setIsAdmin(false);
-    navigate('/login');
+    navigate('/auth');
   };
 
   return (
