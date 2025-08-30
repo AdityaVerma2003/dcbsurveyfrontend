@@ -15,6 +15,7 @@ const AdminDashboard = ({ onLogout }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [filteredData, setFilteredData] = useState([]);
   const [selectedEntry, setSelectedEntry] = useState(null); // New state for modal details
+  const [isClicked, setIsClicked] = useState(false);
 
   // --- Pagination state for Submissions ---
   const [submissionsCurrentPage, setSubmissionsCurrentPage] = useState(1);
@@ -86,6 +87,13 @@ const AdminDashboard = ({ onLogout }) => {
 
  // inside AdminDashboard.jsx
 
+ const handleClick = async () => {
+    setIsClicked(true); // disable immediately after click
+    await downloadExcel(); 
+    setIsClicked(false); // re-enable after download completes
+  };
+
+
 const downloadExcel = async () => {
   try {
     const loadingToast = toast.info("Export started... Preparing Excel file", { autoClose: false });
@@ -93,40 +101,47 @@ const downloadExcel = async () => {
     const requestRes = await axios.post(`${API_BASE_URL}/api/export`, { filter: {} });
     const jobId = requestRes.data.jobId;
 
-    let downloadUrl = null;
-    while (!downloadUrl) {
-      await new Promise(r => setTimeout(r, 3000));
-      const statusRes = await axios.get(`${API_BASE_URL}/api/export/${jobId}/status`);
+    const evtSource = new EventSource(`${API_BASE_URL}/api/export/${jobId}/stream`);
 
-      if (statusRes.data.status === "completed") {
-        downloadUrl = statusRes.data.downloadUrl;
-      } else if (statusRes.data.status === "failed") {
-        throw new Error("Excel job failed on server.");
-      } else {
-        // 🔥 Update progress in toast
-        toast.update(loadingToast, {
-          render: `Processing... ${statusRes.data.progress || 0}%`,
-          type: "info",
-          autoClose: false,
-        });
-      }
-    }
+    evtSource.addEventListener("progress", (e) => {
+      const { progress } = JSON.parse(e.data);
+      toast.update(loadingToast, {
+        render: `Processing... ${progress || 0}%`,
+        type: "info",
+        autoClose: false,
+      });
+    });
 
-    // Trigger download
-    const link = document.createElement("a");
-    link.href = downloadUrl;
-    link.setAttribute("download", `property_survey_${new Date().toISOString().split("T")[0]}.xlsx`);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+    evtSource.addEventListener("completed", (e) => {
+      const { downloadUrl } = JSON.parse(e.data);
 
-    toast.dismiss(loadingToast);
-    toast.success("Excel File Downloaded Successfully!", { position: "top-right" });
+      // trigger download
+      const link = document.createElement("a");
+      link.href = downloadUrl;
+      link.setAttribute("download", `property_survey_${new Date().toISOString().split("T")[0]}.xlsx`);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+
+      toast.dismiss(loadingToast);
+      toast.success("Excel File Downloaded Successfully!", { position: "top-right" });
+
+      evtSource.close();
+    });
+
+    evtSource.addEventListener("failed", (e) => {
+      const { error } = JSON.parse(e.data);
+      toast.dismiss(loadingToast);
+      toast.error(`Excel job failed: ${error}`, { position: "top-right" });
+      evtSource.close();
+    });
+
   } catch (err) {
     console.error("Error downloading Excel file:", err);
     toast.error("Failed to export Excel file. Please try again.", { position: "top-right" });
   }
 };
+
 
 
   const handleDeleteEntry = async (id) => {
@@ -453,8 +468,8 @@ const downloadExcel = async () => {
                 </div>
                 <div className="flex gap-2">
                   <button
-                    onClick={downloadExcel}
-                    disabled={filteredData.length === 0}
+                    onClick={handleClick}
+                    disabled={filteredData.length === 0 || isClicked}
                     className="flex items-center px-4 py-2 bg-green-600 hover:bg-green-700 disabled:bg-gray-400 text-white rounded-lg transition-colors"
                   >
                     <Download className="w-4 h-4 mr-2" />
