@@ -90,7 +90,6 @@ const AdminDashboard = ({ onLogout }) => {
  const handleClick = async () => {
     setIsClicked(true); // disable immediately after click
     await downloadExcel(); 
-    setIsClicked(false); // re-enable after download completes
   };
 
 
