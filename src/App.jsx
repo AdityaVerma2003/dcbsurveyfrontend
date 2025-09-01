@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, useNavigate } from 'react-router-dom';
-import { Analytics } from "@vercel/analytics/next"
+import { Analytics } from "@vercel/analytics/react"
 
 
 import Instructions from './components/Instructions';
@@ -51,6 +51,7 @@ function App() {
           <Route path="*" element={<AuthPages  />} />
         </Routes>
         <Footer />
+         <Analytics />
       </div>
     </div>
   );
