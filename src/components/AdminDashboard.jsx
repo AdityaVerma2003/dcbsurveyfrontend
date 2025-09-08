@@ -16,6 +16,7 @@ const AdminDashboard = ({ onLogout }) => {
   const [filteredData, setFilteredData] = useState([]);
   const [selectedEntry, setSelectedEntry] = useState(null); // New state for modal details
   const [isClicked, setIsClicked] = useState(false);
+  const [dateFilter, setDateFilter] = useState('');
 
   // --- Pagination state for Submissions ---
   const [submissionsCurrentPage, setSubmissionsCurrentPage] = useState(1);
@@ -58,16 +59,21 @@ const AdminDashboard = ({ onLogout }) => {
     fetchData();
   }, []);
 
-  useEffect(() => {
-    // Reset page to 1 whenever search term changes
-    setSubmissionsCurrentPage(1);
-    const filtered = data.filter(entry =>
-      entry.surveyorName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      entry.occupiersName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      entry.propertyAddress.toLowerCase().includes(searchTerm.toLowerCase())
-    );
-    setFilteredData(filtered);
-  }, [searchTerm, data]);
+useEffect(() => {
+  // Reset page to 1 whenever search term or date filter changes
+  setSubmissionsCurrentPage(1);
+  const filtered = data.filter(entry => {
+    const matchesSearch = entry.surveyorName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         entry.occupiersName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         entry.propertyAddress.toLowerCase().includes(searchTerm.toLowerCase());
+    
+    const matchesDate = !dateFilter || 
+                       new Date(entry.date).toDateString() === new Date(dateFilter).toDateString();
+    
+    return matchesSearch && matchesDate;
+  });
+  setFilteredData(filtered);
+}, [searchTerm, dateFilter, data]);
 
   // --- Pagination Logic for Submissions ---
   const indexOfLastSubmission = submissionsCurrentPage * submissionsItemsPerPage;
@@ -88,16 +94,21 @@ const AdminDashboard = ({ onLogout }) => {
  // inside AdminDashboard.jsx
 
  const handleClick = async () => {
-    setIsClicked(true); // disable immediately after click
-    await downloadExcel(); 
-  };
-
+  setIsClicked(true); // disable immediately after click
+  await downloadExcel(); 
+};
 
 const downloadExcel = async () => {
   try {
     const loadingToast = toast.info("Export started... Preparing Excel file", { autoClose: false });
 
-    const requestRes = await axios.post(`${API_BASE_URL}/api/export`, { filter: {} });
+    // Prepare filters object with date filter if selected
+    const filters = {};
+    if (dateFilter) {
+      filters.date = dateFilter;
+    }
+
+    const requestRes = await axios.post(`${API_BASE_URL}/api/export`, { filters });
     const jobId = requestRes.data.jobId;
 
     const evtSource = new EventSource(`${API_BASE_URL}/api/export/${jobId}/stream`);
@@ -114,16 +125,23 @@ const downloadExcel = async () => {
     evtSource.addEventListener("completed", (e) => {
       const { downloadUrl } = JSON.parse(e.data);
 
+      // Create filename with date filter info if applied
+      const dateString = dateFilter ? `_${dateFilter}` : `_${new Date().toISOString().split("T")[0]}`;
+      const filename = `property_survey${dateString}.xlsx`;
+
       // trigger download
       const link = document.createElement("a");
       link.href = downloadUrl;
-      link.setAttribute("download", `property_survey_${new Date().toISOString().split("T")[0]}.xlsx`);
+      link.setAttribute("download", filename);
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
 
       toast.dismiss(loadingToast);
-      toast.success("Excel File Downloaded Successfully!", { position: "top-right" });
+      const successMessage = dateFilter 
+        ? `Excel File Downloaded Successfully! (Data for ${new Date(dateFilter).toLocaleDateString()})` 
+        : "Excel File Downloaded Successfully!";
+      toast.success(successMessage, { position: "top-right" });
 
       evtSource.close();
     });
@@ -138,9 +156,10 @@ const downloadExcel = async () => {
   } catch (err) {
     console.error("Error downloading Excel file:", err);
     toast.error("Failed to export Excel file. Please try again.", { position: "top-right" });
+  } finally {
+    setIsClicked(false); // Re-enable the button after process completes
   }
 };
-
 
 
   const handleDeleteEntry = async (id) => {
@@ -440,7 +459,7 @@ const downloadExcel = async () => {
           </div>
         )}
 
-        {activeView === 'submissions' && (
+       {activeView === 'submissions' && (
           <div>
             <div className="flex items-center justify-between mb-6">
               <h2 className="text-2xl font-bold text-gray-900">Submitted Forms</h2>
@@ -465,6 +484,28 @@ const downloadExcel = async () => {
                     className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   />
                 </div>
+                
+                {/* Date Filter */}
+                <div className="flex items-center gap-2">
+                  <label className="text-sm font-medium text-gray-700 whitespace-nowrap">
+                    Filter by Date:
+                  </label>
+                  <input
+                    type="date"
+                    value={dateFilter}
+                    onChange={(e) => setDateFilter(e.target.value)}
+                    className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  />
+                  {dateFilter && (
+                    <button
+                      onClick={() => setDateFilter('')}
+                      className="px-3 py-2 text-sm text-gray-600 hover:text-gray-800 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
+                    >
+                      Clear
+                    </button>
+                  )}
+                </div>
+                
                 <div className="flex gap-2">
                   <button
                     onClick={handleClick}
@@ -482,6 +523,11 @@ const downloadExcel = async () => {
             <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
               <p className="text-blue-800 font-medium">
                 Showing {indexOfFirstSubmission + 1} to {Math.min(indexOfLastSubmission, filteredData.length)} of {filteredData.length} submissions
+                {dateFilter && (
+                  <span className="ml-2 text-blue-600">
+                    (filtered by date: {new Date(dateFilter).toLocaleDateString()})
+                  </span>
+                )}
               </p>
             </div>
 
@@ -491,7 +537,7 @@ const downloadExcel = async () => {
                 <FileText className="w-16 h-16 text-gray-400 mx-auto mb-4" />
                 <h3 className="text-lg font-semibold text-gray-900 mb-2">No submissions found</h3>
                 <p className="text-gray-600">
-                  {searchTerm ? 'Try adjusting your search criteria' : 'No form entries have been submitted yet.'}
+                  {searchTerm || dateFilter ? 'Try adjusting your search criteria or date filter' : 'No form entries have been submitted yet.'}
                 </p>
               </div>
             ) : (

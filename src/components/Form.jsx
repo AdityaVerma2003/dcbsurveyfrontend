@@ -684,12 +684,11 @@ const App = ({ onLogout }) => {
                                 >
                                     <option value="">Select Number of Floors</option>
                                     <option value="Nil">Nil</option>
-                                    <option value="Ground Floor">Ground Floor</option>
-                                    <option value="First Floor">First Floor</option>
-                                    <option value="Second Floor">Second Floor</option>
-                                    <option value="Third Floor">Third Floor</option>
-                                    <option value="Fourth Floor">Fourth Floor</option>
-                                    <option value="Fifth Floor">Fifth Floor</option>
+                                    <option value="Ground Floor">1</option>
+                                    <option value="First Floor">2</option>
+                                    <option value="Second Floor">3</option>
+                                    <option value="Third Floor">4</option>
+                                    <option value="Fourth Floor">5</option>
                                 </select>
                                 {errors.numberOfFloors && <p className="text-red-500 text-sm mt-1">{errors.numberOfFloors}</p>}
                             </div>
@@ -722,6 +721,7 @@ const App = ({ onLogout }) => {
                                     <option value="">Select Usage</option>
                                     <option value="Residential">Residential</option>
                                     <option value="Commercial">Commercial</option>
+                                    <option value="Both">Both</option>
                                 </select>
                                 {errors.usageType && <p className="text-red-500 text-sm mt-1">{errors.usageType}</p>}
                             </div>
@@ -744,6 +744,7 @@ const App = ({ onLogout }) => {
                                     <option value="Third Floor">Third Floor</option>
                                     <option value="Fourth Floor">Fourth Floor</option>
                                     <option value="Fifth Floor">Fifth Floor</option>
+                                    <option value="Whole Building">Whole Building</option>
                                 </select>
                                 {errors.floor && <p className="text-red-500 text-sm mt-1">{errors.floor}</p>}
                             </div>
